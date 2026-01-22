@@ -84,3 +84,10 @@ El proyecto está organizado siguiendo el patrón **Modelo-Vista-Controlador** p
 3.  Ejecuta en desarrollo: `npm run dev`.
 
 ---
+
+## 🖥️ Cliente / Frontend
+
+Este backend provee la API y servicios para la aplicación cliente (Frontend) de **EvolutFit**, la cual se encuentra desplegada en **Vercel**.
+
+- **Sitio Web (Demo):** [https://evolufit-frontend.vercel.app/](https://evolufit-frontend.vercel.app/)
+- **Repositorio Frontend:** [github.com/DeibyGS/evolufit-frontend](https://github.com/DeibyGS/evolufit-frontend)
