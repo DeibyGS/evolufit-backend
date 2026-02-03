@@ -6,7 +6,7 @@
 const User = require("../models/User.model");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-const { generateSign } = require("../../../utils/jwt"); // Asegúrate de que el nombre de la función sea correcto
+const { generateSign } = require("../../../utils/jwt");
 
 /**
  * Lógica para el registro de nuevos atletas en la plataforma.

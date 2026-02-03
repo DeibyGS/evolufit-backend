@@ -3,6 +3,12 @@
  * Definición de endpoints para la gestión de perfiles, actualización de seguridad y administración.
  */
 
+const validate = require("../../../utils/validate");
+const {
+  updateValidatorSchema,
+  changePasswordSchema,
+} = require("../../validators/userValidator");
+
 const { isAuth } = require("../../middlewares/auth");
 const {
   getAllUsers,
@@ -34,14 +40,19 @@ userRouter.get("/:id", getUserById);
  * @desc    Actualiza la contraseña del usuario.
  * @access  Privado (Requiere validación de identidad)
  */
-userRouter.put("/:id/change-password", isAuth, updatePassword);
+userRouter.put(
+  "/:id/change-password",
+  isAuth,
+  validate(changePasswordSchema),
+  updatePassword,
+);
 
 /**
  * @route   PUT /api/v1/user/:id
  * @desc    Actualiza datos generales del perfil (Nombre, edad, etc.).
  * @access  Privado
  */
-userRouter.put("/:id", isAuth, updateUser);
+userRouter.put("/:id", isAuth, validate(updateValidatorSchema), updateUser);
 
 /**
  * @route   DELETE /api/v1/user/:id

@@ -4,6 +4,8 @@
  */
 
 const { isAuth } = require("../../middlewares/auth");
+const validate = require("../../../utils/validate");
+const { workoutValidatorSchema } = require("../../validators/workoutValidator");
 const {
   createWorkout,
   getMyWorkouts,
@@ -21,7 +23,12 @@ const workoutRouter = require("express").Router();
  * @desc    Registra una nueva sesión de entrenamiento completada.
  * @access  Privado (isAuth garantiza que el registro pertenezca al usuario del token)
  */
-workoutRouter.post("/", isAuth, createWorkout);
+workoutRouter.post(
+  "/",
+  isAuth,
+  validate(workoutValidatorSchema),
+  createWorkout,
+);
 
 /**
  * @route   GET /api/v1/workout/my-workouts
