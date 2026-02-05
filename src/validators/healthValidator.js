@@ -33,3 +33,7 @@ export const healthValidatorSchema = z.object({
   tmb: z.coerce.number(),
   tdee: z.coerce.number(),
 });
+
+module.exports = {
+  healthValidatorSchema,
+};
