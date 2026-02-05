@@ -36,4 +36,5 @@ const HealthSchema = new mongoose.Schema(
   },
 );
 
-module.exports = mongoose.model("Health", HealthSchema);
+const Health = mongoose.model("Health", HealthSchema);
+module.exports = Health;

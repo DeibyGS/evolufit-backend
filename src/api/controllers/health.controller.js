@@ -3,7 +3,7 @@
  * Gestión del historial de métricas de salud (IMC, TDEE, Grasa Corporal).
  */
 
-const HealthRecord = require("../models/health.model");
+const Health = require("../models/health.model");
 
 /**
  * Persistencia de un nuevo cálculo de salud.
@@ -12,7 +12,7 @@ const HealthRecord = require("../models/health.model");
 const saveHealthRecord = async (req, res) => {
   try {
     // 1. Creación del registro extendiendo el cuerpo de la petición con el ID del usuario (inyectado por el middleware de auth)
-    const record = new HealthRecord({ ...req.body, userId: req.user._id });
+    const record = new Health({ ...req.body, userId: req.user._id });
 
     // 2. Guardado en la colección 'healthrecords'
     await record.save();
@@ -33,7 +33,7 @@ const getAllHealthRecords = async (req, res) => {
   try {
     // 1. Búsqueda de todos los documentos que pertenezcan al usuario autenticado
     // .sort({ createdAt: -1 }) asegura que el historial aparezca de más reciente a más antiguo
-    const history = await HealthRecord.find({ userId: req.user._id }).sort({
+    const history = await Health.find({ userId: req.user._id }).sort({
       createdAt: -1,
     });
 
@@ -54,10 +54,14 @@ const deleteHealthRecord = async (req, res) => {
   try {
     // 1. Localización y borrado atómico
     // Crucial: Se valida que el registro pertenezca al usuario para evitar que un usuario borre datos de otro
-    await HealthRecord.findOneAndDelete({
+    const deleteRecord = await Health.findOneAndDelete({
       _id: req.params.id,
       userId: req.user._id,
     });
+
+    if (!deleteRecord) {
+      return res.status(404).json({ message: "Registro no encontrado" });
+    }
 
     res.status(200).json({ message: "Registro eliminado" });
   } catch (error) {
