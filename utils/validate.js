@@ -8,8 +8,8 @@ const validate = (schema) => (req, res, next) => {
     if (!result.success) {
       // Usamos ?. y || [] para asegurar que siempre haya un array sobre el cual hacer .map()
       const errorMessages = (result.error?.errors || []).map((err) => ({
-        campo: err.path.length > 0 ? err.path[err.path.length - 1] : "campo",
-        mensaje: err.message,
+        campo: err.path[err.path.length - 1], // Ej: "age"
+        mensaje: err.message, // Ej: "Debes tener al menos 15 años..."
       }));
 
       return res.status(400).json({
