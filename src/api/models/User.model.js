@@ -27,16 +27,15 @@ const userSchema = new Schema(
     age: {
       type: Number,
       required: true,
-      // Validaciones de rango de edad con mensajes personalizados
       min: [14, "Debes tener al menos 14 años para usar EvolutFit"],
       max: [100, "Por favor, introduce una edad válida"],
     },
     email: {
       type: String,
       required: true,
-      unique: true, // Índice único para evitar registros duplicados
+      unique: true,
       trim: true,
-      lowercase: true, // Normaliza el correo para evitar errores de login
+      lowercase: true,
     },
     password: {
       type: String,
@@ -46,12 +45,12 @@ const userSchema = new Schema(
     },
     isActive: {
       type: Boolean,
-      default: true, // Permite desactivar cuentas sin borrarlas físicamente
+      default: true,
     },
   },
   {
-    versionKey: false, // Elimina el campo __v
-    timestamps: true, // Gestiona automáticamente createdAt y updatedAt
+    versionKey: false,
+    timestamps: true,
   },
 );
 

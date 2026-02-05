@@ -24,7 +24,6 @@ const register = async (req, res) => {
     }
 
     // 2. Instancia de nuevo usuario
-    // Nota técnica: Se asume que el cifrado de la password se gestiona vía middleware pre-save en el esquema de Mongoose.
     const newUser = new User({
       name,
       lastname,
@@ -51,7 +50,6 @@ const register = async (req, res) => {
       token,
     });
   } catch (error) {
-    // Registro de logs de error para depuración en servidor
     console.error("Error en el registro:", error);
     res.status(500).json({
       message: "Error interno del servidor",

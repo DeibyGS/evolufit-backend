@@ -32,14 +32,12 @@ const getSocialPosts = async (req, res) => {
 
     // 4. Pipeline de Agregación para procesar el Feed
     const posts = await Social.aggregate([
-      { $match: query }, // Filtro inicial
+      { $match: query },
 
       // Añade el campo calculado likesCount basado en el tamaño del array 'likes'
       { $addFields: { likesCount: { $size: "$likes" } } },
 
-      { $sort: sortQuery }, // Aplicación del orden elegido
-
-      // Join con la colección de usuarios para obtener datos del creador
+      { $sort: sortQuery },
       {
         $lookup: {
           from: "users",

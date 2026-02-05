@@ -2,7 +2,8 @@
  * HEALTH ROUTER - EVOLUTFIT
  * Definición de rutas protegidas para la gestión del historial biométrico.
  */
-
+const validate = require("../../../utils/validate");
+const { healthValidatoeSchema } = require("../../validators/healthValidator");
 const { isAuth } = require("../../middlewares/auth");
 
 const {
@@ -19,7 +20,12 @@ const healthRouter = require("express").Router();
  * @desc    Registra un nuevo cálculo de salud (IMC, TDEE, etc.)
  * @access  Privado (Requiere Token)
  */
-healthRouter.post("/", isAuth, saveHealthRecord);
+healthRouter.post(
+  "/",
+  isAuth,
+  validate(healthValidatoeSchema),
+  saveHealthRecord,
+);
 
 /**
  * @route   GET /api/v1/health

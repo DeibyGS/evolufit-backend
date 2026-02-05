@@ -16,23 +16,19 @@ const userValidatorSchema = z.object({
   password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
 });
 
-// 2. Login (Derivado)
 const loginValidatorSchema = userValidatorSchema.pick({
   email: true,
   password: true,
 });
 
-// 3. Update Perfil (Derivado - Campos opcionales)
 const updateValidatorSchema = userValidatorSchema
   .omit({ password: true })
   .partial();
 
-// 4. Cambio de Contraseña (Específico)
 const changePasswordSchema = z.object({
   password: z
     .string()
     .min(6, "La nueva contraseña debe tener al menos 6 caracteres"),
-  // Aquí podrías añadir confirmPassword si quisieras validarlo en el backend
 });
 
 module.exports = {

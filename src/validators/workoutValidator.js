@@ -1,4 +1,5 @@
 const { z } = require("zod");
+const { MUSCLE_GROUPS, EXERCISE_NAMES } = require("../constants/exercises");
 
 /**
  * Esquema de Series (El nivel más bajo)
@@ -12,8 +13,18 @@ const setSchema = z.object({
  * Esquema de Ejercicio (Contiene un array de series)
  */
 const exerciseSchema = z.object({
-  muscleGroup: z.string().min(1, "El grupo muscular es obligatorio"),
-  exerciseName: z.string().min(1, "El nombre del ejercicio es obligatorio"),
+  // 2. Usamos el array MUSCLE_GROUPS de las constantes
+  muscleGroup: z.enum(MUSCLE_GROUPS, {
+    errorMap: () => ({ message: "Grupo muscular no válido" }),
+  }),
+
+  // 3. Usamos el array EXERCISE_NAMES para validar el nombre del ejercicio
+  exerciseName: z.enum(EXERCISE_NAMES, {
+    errorMap: () => ({
+      message: "El ejercicio seleccionado no existe en nuestra base de datos",
+    }),
+  }),
+
   sets: z
     .array(setSchema)
     .min(1, "Cada ejercicio debe tener al menos una serie"),

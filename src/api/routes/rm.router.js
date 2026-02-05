@@ -2,7 +2,8 @@
  * RM & LEADERBOARD ROUTER - EVOLUTFIT
  * Definición de endpoints para el registro de marcas personales y acceso al ranking global.
  */
-
+const { rmValidatorSchema } = require("../../validators/rmValidator");
+const validate = require("../../../utils/validate");
 const { isAuth } = require("../../middlewares/auth");
 const {
   saveRM,
@@ -19,7 +20,7 @@ const rmRouter = require("express").Router();
  * @desc    Registra una nueva marca de RM (1 Repetición Máxima).
  * @access  Privado
  */
-rmRouter.post("/", isAuth, saveRM);
+rmRouter.post("/", isAuth, validate(rmValidatorSchema), saveRM);
 
 /**
  * @route   GET /api/v1/rm

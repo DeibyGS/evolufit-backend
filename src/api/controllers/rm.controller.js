@@ -3,7 +3,9 @@
  * Gestión de cálculos de 1RM (Repetición Máxima) y Rankings globales.
  */
 
+const { rm } = require("fs");
 const RMRecord = require("../models/rm.model");
+const { rmValidatorSchema } = require("../../validators/rmValidator");
 
 /**
  * Almacena un nuevo cálculo de RM.
@@ -14,10 +16,8 @@ const saveRM = async (req, res) => {
     // 1. Instancia del registro vinculando el userId del token
     const newRecord = new RMRecord({ ...req.body, userId: req.user._id });
 
-    // 2. Persistencia en la colección 'rmrecords'
+    // 2. Guardado en BD
     await newRecord.save();
-
-    // 3. Respuesta exitosa (201 Created)
     res.status(201).json(newRecord);
   } catch (error) {
     res.status(400).json({ message: "Error al guardar el RM" });
