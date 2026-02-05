@@ -1,4 +1,4 @@
-import { z } from "zod";
+const { z } = require("zod");
 
 export const healthValidatorSchema = z.object({
   // Permitimos decimales para mayor precisión en el progreso
