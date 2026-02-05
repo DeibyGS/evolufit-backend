@@ -1,49 +1,29 @@
-const { z } = require("zod");
-
-/**
- * MIDDLEWARE DE VALIDACIÓN GENÉRICO - EVOLUTFIT
- * Protege contra errores de 'undefined' y asegura respuestas JSON.
- */
 const validate = (schema) => (req, res, next) => {
-  try {
-    // 1. Verificación de seguridad: ¿Existe el esquema?
-    if (!schema || typeof schema.safeParse !== "function") {
-      throw new Error("Esquema de validación no válido o no proporcionado");
-    }
+  console.log("BODY QUE LLEGA AL VALIDATOR:", req.body);
+  const result = schema.safeParse(req.body);
 
-    const result = schema.safeParse(req.body);
+  if (!result.success) {
+    // Si el array sale vacío, es porque 'err.path[0]' falló.
+    // Vamos a asegurar que siempre devuelva algo.
+    const errorMessages = result.error.errors.map((err) => {
+      return {
+        // Si path[0] no existe, buscamos en el resto del array o ponemos 'general'
+        campo:
+          err.path.length > 0 ? err.path[err.path.length - 1] : "formulario",
+        mensaje: err.message,
+      };
+    });
 
-    if (!result.success) {
-      // 2. Extracción segura de errores
-      // Usamos el encadenamiento opcional (?.) para evitar el error de 'reading map'
-      const errorMessages =
-        result.error?.errors?.map((err) => ({
-          campo: err.path[0] || "desconocido",
-          mensaje: err.message,
-        })) || [];
+    console.log("Errores detectados por Zod:", errorMessages); // <--- MIRA ESTO EN TU TERMINAL
 
-      return res.status(400).json({
-        status: "error",
-        message: "Validación fallida",
-        errors: errorMessages,
-      });
-    }
-
-    // 3. Sanitización: Solo pasan al controlador los datos definidos en el esquema
-    req.body = result.data;
-    next();
-  } catch (error) {
-    // 4. Captura de errores catastróficos (Evita el 500 HTML)
-    console.error(
-      "❌ Error Crítico en Middleware de Validación:",
-      error.message,
-    );
-    return res.status(500).json({
+    return res.status(400).json({
       status: "error",
-      message: "Error interno en el proceso de validación",
-      details: error.message,
+      message: "Validación fallida",
+      errors: errorMessages,
     });
   }
+  req.body = result.data;
+  next();
 };
 
 module.exports = validate;
