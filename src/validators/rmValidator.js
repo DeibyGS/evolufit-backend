@@ -1,5 +1,5 @@
 const { z } = require("zod");
-const { MUSCLE_GROUPS, EXERCISE_NAMES } = require("../constants/exercises");
+const { MUSCLE_GROUPS, EXERCISE_NAMES } = require("../constants/exerciseList");
 
 /**
  * VALIDADOR DE RM - EVOLUTFIT

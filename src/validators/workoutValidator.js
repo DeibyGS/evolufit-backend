@@ -1,5 +1,5 @@
 const { z } = require("zod");
-const { MUSCLE_GROUPS, EXERCISE_NAMES } = require("../constants/exercises");
+const { MUSCLE_GROUPS, EXERCISE_NAMES } = require("../constants/exerciseList");
 
 /**
  * Esquema de Series (El nivel más bajo)
