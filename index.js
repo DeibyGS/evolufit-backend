@@ -70,8 +70,6 @@ app.use((err, req, res, next) => {
   res.status(err.status || 500).json({
     status: "error",
     message: err.message || "Internal Server Error",
-    // Solo enviamos el stack del error si no estamos en producción
-    stack: process.env.NODE_ENV === "development" ? err.stack : {},
   });
 });
 
