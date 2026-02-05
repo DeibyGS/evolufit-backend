@@ -46,8 +46,33 @@ app.use("/api/social", socialRouter); // Feed comunitario y rutinas compartidas
  * MANEJO DE RUTAS NO ENCONTRADAS (404)
  * Actúa como un "catch-all" para cualquier petición a un endpoint inexistente.
  */
+// ... (tus rutas anteriores)
+
+/**
+ * MANEJO DE RUTAS NO ENCONTRADAS (404)
+ */
 app.use((req, res) => {
   res.status(404).json({ message: "Route Not Found" });
+});
+
+/**
+ * MIDDLEWARE DE MANEJO DE ERRORES GLOBAL (AÑADE ESTO)
+ * Express detecta que es un manejador de errores porque tiene 4 parámetros (err, req, res, next)
+ */
+app.use((err, req, res, next) => {
+  console.error("❌ ERROR DEL SERVIDOR:", err.stack);
+
+  // Si el error ocurrió después de que la respuesta ya se envió, delegamos al default
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  res.status(err.status || 500).json({
+    status: "error",
+    message: err.message || "Internal Server Error",
+    // Solo enviamos el stack del error si no estamos en producción
+    stack: process.env.NODE_ENV === "development" ? err.stack : {},
+  });
 });
 
 /**

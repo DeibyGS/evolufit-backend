@@ -16,7 +16,7 @@ const healthValidatorSchema = z.object({
   age: z.coerce
     .number()
     .int("La edad debe ser un número entero")
-    .min(15, "Debes tener al menos 15 años para usar la calculadora"),
+    .min(14, "Debes tener al menos 15 años para usar la calculadora"),
 
   gender: z.enum(["hombre", "mujer"], {
     errorMap: () => ({ message: "El género debe ser 'hombre' o 'mujer'" }),
