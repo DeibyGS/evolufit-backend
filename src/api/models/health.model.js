@@ -1,32 +1,39 @@
 const mongoose = require("mongoose");
 
-const HealthSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    required: true,
+/**
+ * HEALTH RECORD MODEL - EVOLUTFIT
+ * Estructura corregida para persistencia de métricas biométricas.
+ */
+const HealthSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    weight: { type: Number, required: true },
+    height: { type: Number, required: true },
+    age: { type: Number, required: true },
+    gender: {
+      type: String,
+      enum: ["hombre", "mujer"],
+      required: true,
+    },
+    activity: { type: Number, required: true },
+
+    // Campos calculados
+    imc: Number,
+    tmb: Number,
+    tdee: Number,
+
+    // Nota: 'createdAt' ya no es necesario definirlo manualmente
+    // porque 'timestamps: true' lo crea por ti.
   },
-  weight: { type: Number, required: true },
-  height: { type: Number, required: true },
-  age: { type: Number, required: true },
-  gender: {
-    type: String,
-    enum: ["hombre", "mujer"],
-    required: true,
+  {
+    // Opciones del esquema
+    timestamps: true, // Crea 'createdAt' y 'updatedAt' automáticamente
+    versionKey: false, // Elimina el campo '__v'
   },
-  activity: { type: Number, required: true },
+);
 
-  imc: Number,
-  tmb: Number,
-  tdee: Number,
-
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-  versionKey: false,
-});
-
-const Health = mongoose.model("HealthRecords", HealthSchema);
-
-module.exports = Health;
+module.exports = mongoose.model("Health", HealthSchema);

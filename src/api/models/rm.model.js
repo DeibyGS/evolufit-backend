@@ -46,8 +46,6 @@ const rmSchema = new mongoose.Schema(
     date: { type: Date, default: Date.now },
   },
   {
-    // timestamps: Genera automáticamente 'createdAt' y 'updatedAt'
-    // versionKey: false: Elimina el campo __v interno de Mongoose
     timestamps: true,
     versionKey: false,
   },
