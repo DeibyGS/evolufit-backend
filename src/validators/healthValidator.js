@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const healthValidatoeSchema = z.object({
+export const healthValidatorSchema = z.object({
   // Permitimos decimales para mayor precisión en el progreso
   weight: z.coerce
     .number()

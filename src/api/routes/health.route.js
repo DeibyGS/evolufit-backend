@@ -3,7 +3,7 @@
  * Definición de rutas protegidas para la gestión del historial biométrico.
  */
 const validate = require("../../../utils/validate");
-const { healthValidatoeSchema } = require("../../validators/healthValidator");
+const { healthValidatorSchema } = require("../../validators/healthValidator");
 const { isAuth } = require("../../middlewares/auth");
 
 const {
@@ -23,7 +23,7 @@ const healthRouter = require("express").Router();
 healthRouter.post(
   "/",
   isAuth,
-  validate(healthValidatoeSchema),
+  validate(healthValidatorSchema),
   saveHealthRecord,
 );
 

@@ -24,4 +24,9 @@ const HealthSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  versionKey: false,
 });
+
+const Health = mongoose.model("Health", HealthSchema);
+
+module.exports = Health;
