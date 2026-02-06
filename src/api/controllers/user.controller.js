@@ -85,35 +85,36 @@ const updateUser = async (req, res) => {
 const updatePassword = async (req, res) => {
   try {
     const userId = req.user._id;
-    const { password } = req.body; // Nueva contraseña validada por Zod
+    // Ahora esperamos recibir AMBAS contraseñas del frontend
+    const { oldPassword, password } = req.body;
 
-    // 1. Buscamos el documento de usuario
+    // 1. Buscar al usuario (necesitamos su hash actual)
     const user = await User.findById(userId);
-
     if (!user) {
-      return res.status(404).json({
-        status: "error",
-        message: "Usuario no encontrado",
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+
+    // 2. ¡ESTA ES LA PARTE QUE FALTABA!
+    // Comparamos la "contraseña actual" enviada con la de la base de datos
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+
+    if (!isMatch) {
+      return res.status(401).json({
+        message:
+          "La contraseña actual es incorrecta. No se puede realizar el cambio.",
       });
     }
 
-    // 2. Asignamos la nueva contraseña en texto plano.
-    // Mongoose detectará el cambio gracias a tu middleware .pre("save")
+    // 3. Si es correcta, asignamos la nueva
+    // Tu middleware pre("save") se encargará de hashear 'password'
     user.password = password;
-
-    // 3. Guardamos. Aquí se dispara: if (!this.isModified("password")) de tu modelo.
     await user.save();
 
-    res.status(200).json({
-      status: "success",
-      message: "Contraseña actualizada correctamente",
-    });
+    res.status(200).json({ message: "Contraseña actualizada correctamente" });
   } catch (error) {
-    console.error("🔥 Error en updatePassword:", error);
-    res.status(500).json({
-      status: "error",
-      message: "No se pudo actualizar la contraseña",
-    });
+    res
+      .status(500)
+      .json({ message: "Error al intentar cambiar la contraseña" });
   }
 };
 
