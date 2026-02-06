@@ -2,8 +2,6 @@
  * RM & LEADERBOARD CONTROLLER - EVOLUTFIT
  * Gestión de cálculos de 1RM (Repetición Máxima) y Rankings globales.
  */
-const RMRecord = require("../models/rm.model");
-
 /**
  * Almacena un nuevo cálculo de RM.
  * Utiliza el spread operator para incluir los datos del cálculo y el ID del usuario autenticado.
