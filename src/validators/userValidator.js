@@ -61,9 +61,8 @@ const updateValidatorSchema = userValidatorSchema
 
 // 4. Esquema de Cambio de Contraseña
 const changePasswordSchema = z.object({
-  password: z
-    .string({ required_error: "La contraseña es obligatoria" })
-    .min(6, "La nueva contraseña debe tener al menos 6 caracteres"),
+  oldPassword: userValidatorSchema.shape.password,
+  password: userValidatorSchema.shape.password,
 });
 
 module.exports = {
