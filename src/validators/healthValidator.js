@@ -3,12 +3,18 @@ const { z } = require("zod");
 const healthValidatorSchema = z.object({
   // Permitimos decimales para mayor precisión en el progreso
   weight: z.coerce
-    .number()
+    .number({
+      invalid_type_error: "El peso debe ser un número",
+      required_error: "El peso es obligatorio",
+    })
     .min(20, "El peso debe ser realista (mínimo 20kg)")
     .max(300, "El peso excede el límite permitido"),
 
   height: z.coerce
-    .number()
+    .number({
+      invalid_type_error: "La altura debe ser un número",
+      required_error: "La altura es obligatoria",
+    })
     .int("La altura debe ser un número entero (cm)")
     .min(100, "La altura mínima es 100 cm")
     .max(250, "La altura máxima es 250 cm"),
