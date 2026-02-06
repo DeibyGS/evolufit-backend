@@ -19,7 +19,8 @@ const healthValidatorSchema = z.object({
     .min(14, "Debes tener al menos 15 años para usar la calculadora"),
 
   gender: z.enum(["hombre", "mujer"], {
-    errorMap: () => ({ message: "El género debe ser 'hombre' o 'mujer'" }),
+    invalid_type_error: "El género debe ser 'hombre' o 'mujer'",
+    required_error: "El género es obligatorio",
   }),
 
   // Quitamos .int() porque usas factores como 1.375 o 1.55
@@ -29,9 +30,9 @@ const healthValidatorSchema = z.object({
     .max(2.5, "El nivel de actividad es demasiado alto"),
 
   // Estos campos son calculados, solo validamos que sean números
-  imc: z.coerce.number(),
-  tmb: z.coerce.number(),
-  tdee: z.coerce.number(),
+  imc: z.coerce.number().optional(),
+  tmb: z.coerce.number().optional(),
+  tdee: z.coerce.number().optional(),
 });
 
 module.exports = {
