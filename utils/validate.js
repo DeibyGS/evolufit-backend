@@ -13,19 +13,28 @@ const validate = (schema) => (req, res, next) => {
     const result = schema.safeParse(req.body);
 
     if (!result.success) {
-      // 2. Mapeo ultra-defensivo (Check de cada propiedad)
-      const errorMessages = result.error.errors.map((err) => {
-        console.log("❌ Detalle error Zod:", err); // Esto saldrá en los logs de Render
+      // Log para ver qué tiene exactamente el objeto de error si falla el mapeo
+      console.log("❌ ZOD RAW ERROR:", JSON.stringify(result.error));
 
-        return {
-          // Si path no existe o está vacío, ponemos 'general'
-          path:
-            err.path && err.path.length > 0
-              ? err.path[err.path.length - 1]
-              : "general",
-          message: err.message || "Error de validación",
-        };
-      });
+      // Usamos encadenamiento opcional (?.) y un array vacío por defecto ([])
+      const errorList = result.error?.errors || [];
+
+      if (errorList.length === 0) {
+        return res.status(400).json({
+          status: "error",
+          errors: [
+            { path: "general", message: "Error de validación desconocido" },
+          ],
+        });
+      }
+
+      const errorMessages = errorList.map((err) => ({
+        path:
+          err.path && err.path.length > 0
+            ? err.path[err.path.length - 1]
+            : "general",
+        message: err.message || "Dato inválido",
+      }));
 
       return res.status(400).json({
         status: "error",
