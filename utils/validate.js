@@ -13,32 +13,42 @@ const validate = (schema) => (req, res, next) => {
     const result = schema.safeParse(req.body);
 
     if (!result.success) {
-      // Log para ver qué tiene exactamente el objeto de error si falla el mapeo
-      console.log("❌ ZOD RAW ERROR:", JSON.stringify(result.error));
+      // 1. Log profundo para ver qué está pasando
+      console.log("❌ ZOD ERROR DETECTADO");
 
-      // Usamos encadenamiento opcional (?.) y un array vacío por defecto ([])
-      const errorList = result.error?.errors || [];
+      // 2. Usamos flatten() para obtener un formato más amigable
+      // fieldErrors será algo como: { age: ["Debes tener..."], weight: ["Mínimo 20kg"] }
+      const formattedErrors = result.error.flatten().fieldErrors;
 
-      if (errorList.length === 0) {
-        return res.status(400).json({
-          status: "error",
-          errors: [
-            { path: "general", message: "Error de validación desconocido" },
-          ],
+      const errorMessages = [];
+
+      // 3. Convertimos el objeto de fieldErrors en nuestro array estándar
+      for (const field in formattedErrors) {
+        errorMessages.push({
+          path: field,
+          message: formattedErrors[field][0], // Tomamos el primer mensaje de error del campo
         });
       }
 
-      const errorMessages = errorList.map((err) => ({
-        path:
-          err.path && err.path.length > 0
-            ? err.path[err.path.length - 1]
-            : "general",
-        message: err.message || "Dato inválido",
-      }));
+      // 4. Si por algo no hay errores de campo, buscamos errores de formulario (formErrors)
+      if (errorMessages.length === 0) {
+        result.error.errors.forEach((err) => {
+          errorMessages.push({
+            path:
+              err.path.length > 0 ? err.path[err.path.length - 1] : "general",
+            message: err.message,
+          });
+        });
+      }
+
+      console.log("📤 Enviando al front:", errorMessages);
 
       return res.status(400).json({
         status: "error",
-        errors: errorMessages,
+        errors:
+          errorMessages.length > 0
+            ? errorMessages
+            : [{ path: "general", message: "Error de validación" }],
       });
     }
 
