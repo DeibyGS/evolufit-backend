@@ -5,22 +5,50 @@
 
 const { rm } = require("fs");
 const RMRecord = require("../models/rm.model");
-const { rmValidatorSchema } = require("../../validators/rmValidator");
 
 /**
  * Almacena un nuevo cálculo de RM.
  * Utiliza el spread operator para incluir los datos del cálculo y el ID del usuario autenticado.
  */
+const RMRecord = require("../models/RMRecord");
+
 const saveRM = async (req, res) => {
   try {
-    // 1. Instancia del registro vinculando el userId del token
-    const newRecord = new RMRecord({ ...req.body, userId: req.user._id });
+    const { exerciseName, brzyckiResult } = req.body;
+    const userId = req.user._id;
 
-    // 2. Guardado en BD
+    // 1. Buscamos el mejor RM previo de este ejercicio para ESTE usuario
+    // Ordenamos descendente por brzyckiResult para obtener el valor más alto
+    const previousBest = await RMRecord.findOne({
+      userId,
+      exerciseName,
+    }).sort({ brzyckiResult: -1 });
+
+    // 2. Lógica de Récord Personal (PR)
+    // Es récord si no hay registros previos O si el actual supera al anterior
+    const isNewRecord =
+      !previousBest || brzyckiResult > previousBest.brzyckiResult;
+
+    // 3. Instanciamos con los datos del body + userId + flag de récord
+    const newRecord = new RMRecord({
+      ...req.body,
+      userId,
+      isPersonalRecord: isNewRecord, // Opcional: guardar esto ayuda a analíticas rápidas
+    });
+
+    // 4. Guardado en BD
     await newRecord.save();
-    res.status(201).json(newRecord);
+
+    // 5. Respuesta enriquecida
+    // Enviamos el registro y el flag 'isNewRecord' para que el Front sepa si mostrar fuego 🔥
+    res.status(201).json({
+      ...newRecord.toObject(),
+      isNewRecord,
+    });
   } catch (error) {
-    res.status(400).json({ message: "Error al guardar el RM" });
+    // Debugging: Siempre loguea el error real en consola para diagnosticar en Render/Vercel
+    console.error("🔥 Error en saveRM:", error);
+    res.status(500).json({ message: "Error al guardar el récord" });
   }
 };
 
