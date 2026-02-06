@@ -1,33 +1,68 @@
 const { z } = require("zod");
 
-// 1. Esquema Maestro (Registro)
+/**
+ * VALIDADOR DE USUARIOS - EVOLUTFIT
+ * Coherencia visual y técnica con el sistema de validación global.
+ */
 const userValidatorSchema = z.object({
   name: z
-    .string()
+    .string({
+      required_error: "El nombre es obligatorio",
+      invalid_type_error: "El nombre debe ser una cadena de texto",
+    })
     .trim()
     .min(2, "El nombre debe tener al menos 2 caracteres")
-    .max(50),
+    .max(50, "El nombre es demasiado largo"),
+
   lastname: z
-    .string()
+    .string({
+      required_error: "El apellido es obligatorio",
+      invalid_type_error: "El apellido debe ser una cadena de texto",
+    })
     .trim()
-    .min(2, "El apellido debe tener al menos 2 caracteres"),
-  age: z.coerce.number().min(14, "Mínimo 14 años").max(100, "Edad no válida"),
-  email: z.string().trim().lowercase().email("Formato de correo inválido"),
-  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
+    .min(2, "El apellido debe tener al menos 2 caracteres")
+    .max(50, "El apellido es demasiado largo"),
+
+  age: z.coerce
+    .number({
+      required_error: "La edad es obligatoria",
+      invalid_type_error: "La edad debe ser un número",
+    })
+    .int("La edad debe ser un número entero")
+    .min(14, "Debes tener al menos 14 años para registrarte")
+    .max(100, "La edad ingresada no es válida"),
+
+  email: z
+    .string({
+      required_error: "El correo electrónico es obligatorio",
+    })
+    .trim()
+    .lowercase()
+    .email("Formato de correo electrónico inválido"),
+
+  password: z
+    .string({
+      required_error: "La contraseña es obligatoria",
+    })
+    .min(6, "La contraseña debe tener al menos 6 caracteres")
+    .max(100, "La contraseña es demasiado larga"),
 });
 
-const loginValidatorSchema = userValidatorSchema.pick({
-  email: true,
-  password: true,
+// 2. Esquema de Login (Reutiliza email y password del maestro)
+const loginValidatorSchema = z.object({
+  email: userValidatorSchema.shape.email,
+  password: z.string({ required_error: "La contraseña es obligatoria" }),
 });
 
+// 3. Esquema de Actualización de Perfil (Omitimos password por seguridad)
 const updateValidatorSchema = userValidatorSchema
   .omit({ password: true })
   .partial();
 
+// 4. Esquema de Cambio de Contraseña
 const changePasswordSchema = z.object({
   password: z
-    .string()
+    .string({ required_error: "La contraseña es obligatoria" })
     .min(6, "La nueva contraseña debe tener al menos 6 caracteres"),
 });
 

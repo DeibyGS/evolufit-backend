@@ -39,97 +39,107 @@ const getUserById = async (req, res) => {
 };
 
 /**
- * Actualiza la información del perfil (nombre, edad, etc.).
- * @param {Object} req.body - Campos a actualizar.
- * @option runValidators - Fuerza la ejecución de validaciones definidas en el esquema.
+ * ACTUALIZAR PERFIL (DATOS GENERALES)
+ * @desc Actualiza nombre, apellido, edad, etc.
  */
 const updateUser = async (req, res) => {
   try {
-    const { id } = req.params;
+    // Extraemos el ID del token (inyectado por isAuth)
+    const userId = req.user._id;
 
-    const updatedUser = await User.findByIdAndUpdate(id, req.body, {
-      new: true, // Retorna el documento ya actualizado
-      runValidators: true,
-    });
+    // Actualizamos usando findByIdAndUpdate para eficiencia
+    // El req.body ya viene filtrado y validado por updateValidatorSchema (Zod)
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: req.body },
+      {
+        new: true, // Devuelve el documento ya actualizado
+        runValidators: true, // Asegura que se respeten las validaciones del modelo
+      },
+    ).select("-password"); // Excluimos la contraseña por seguridad
+
     if (!updatedUser) {
-      return res.status(404).json({ message: "User not found" });
-    }
-    res.status(200).json(updatedUser);
-  } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
-
-/**
- * Gestión de cambio de contraseña con verificación de identidad.
- */
-const updatePassword = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { oldPassword, newPassword } = req.body;
-
-    // 1. Verificación de permisos: Comparación del ID del Token vs ID del parámetro
-    // Esto garantiza que un usuario solo pueda cambiar su propia contraseña.
-    if (req.user._id.toString() !== id) {
-      return res.status(403).json({ message: "No tienes permiso" });
-    }
-
-    const user = await User.findById(id);
-    if (!user)
-      return res.status(404).json({ message: "Usuario no encontrado" });
-
-    // 2. Validación de credencial actual
-    const isMatch = await bcrypt.compare(oldPassword, user.password);
-    if (!isMatch) {
-      return res
-        .status(400)
-        .json({ message: "La contraseña actual es incorrecta" });
-    }
-
-    // 3. Actualización de Password:
-    // Al asignar el valor en texto plano y ejecutar .save(), se dispara el middleware
-    // .pre("save") del modelo para encriptar la nueva clave.
-    user.password = newPassword;
-    await user.save();
-
-    res.status(200).json({ message: "Contraseña actualizada correctamente" });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Error del servidor", error: error.message });
-  }
-};
-
-/**
- * Eliminación definitiva de la cuenta de usuario.
- */
-const deleteUser = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // 1. Capa de Seguridad: Validar que el solicitante es el dueño de la cuenta
-    // Imprescindible para evitar borrados accidentales o malintencionados.
-    if (req.user._id.toString() !== id) {
-      return res.status(403).json({
-        message:
-          "No tienes permiso para eliminar una cuenta que no te pertenece.",
+      return res.status(404).json({
+        status: "error",
+        message: "Usuario no encontrado",
       });
     }
 
-    const userDeleted = await User.findByIdAndDelete(id);
+    res.status(200).json({
+      status: "success",
+      data: updatedUser,
+    });
+  } catch (error) {
+    console.error("🔥 Error en updateUser:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Fallo al actualizar los datos del perfil",
+    });
+  }
+};
+
+/**
+ * ACTUALIZAR CONTRASEÑA
+ * @desc Cambia la contraseña disparando el middleware pre("save")
+ */
+const updatePassword = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { password } = req.body; // Nueva contraseña validada por Zod
+
+    // 1. Buscamos el documento de usuario
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        status: "error",
+        message: "Usuario no encontrado",
+      });
+    }
+
+    // 2. Asignamos la nueva contraseña en texto plano.
+    // Mongoose detectará el cambio gracias a tu middleware .pre("save")
+    user.password = password;
+
+    // 3. Guardamos. Aquí se dispara: if (!this.isModified("password")) de tu modelo.
+    await user.save();
+
+    res.status(200).json({
+      status: "success",
+      message: "Contraseña actualizada correctamente",
+    });
+  } catch (error) {
+    console.error("🔥 Error en updatePassword:", error);
+    res.status(500).json({
+      status: "error",
+      message: "No se pudo actualizar la contraseña",
+    });
+  }
+};
+
+const deleteUser = async (req, res) => {
+  try {
+    // 1. Obtenemos el ID directamente del token (Seguridad total)
+    const userId = req.user._id;
+
+    // 2. Eliminamos
+    const userDeleted = await User.findByIdAndDelete(userId);
 
     if (!userDeleted) {
-      return res.status(404).json({ message: "Usuario no encontrado" });
+      return res.status(404).json({
+        status: "error",
+        message: "Usuario no encontrado",
+      });
     }
 
     res.status(200).json({
-      message: "Usuario eliminado correctamente",
-      user: userDeleted,
+      status: "success",
+      message: "Cuenta eliminada permanentemente",
     });
   } catch (error) {
     res.status(500).json({
-      message: "Error al intentar eliminar el usuario",
-      error: error.message,
+      status: "error",
+      message: "Error al intentar eliminar la cuenta",
     });
   }
 };

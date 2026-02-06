@@ -1,6 +1,6 @@
 /**
  * USER ROUTER - EVOLUTFIT
- * Definición de endpoints para la gestión de perfiles, actualización de seguridad y administración.
+ * Gestión de perfiles, seguridad y administración.
  */
 
 const validate = require("../../../utils/validate");
@@ -23,43 +23,43 @@ const userRouter = require("express").Router();
 
 /**
  * @route   GET /api/v1/user
- * @desc    Obtiene la lista de todos los usuarios registrados.
- * @access  Público (Nota: En producción se recomienda proteger con isAuth + isAdmin)
+ * @desc    Obtiene la lista de todos los usuarios (Ranking/Admin).
+ * @access  Público
  */
 userRouter.get("/", getAllUsers);
 
 /**
  * @route   GET /api/v1/user/:id
- * @desc    Obtiene la información detallada de un perfil por su ID.
+ * @desc    Ver perfil público de otro atleta por su ID.
  * @access  Público
  */
 userRouter.get("/:id", getUserById);
 
 /**
- * @route   PUT /api/v1/user/:id/change-password
- * @desc    Actualiza la contraseña del usuario.
- * @access  Privado (Requiere validación de identidad)
+ * @route   PATCH /api/v1/user/change-password
+ * @desc    Actualiza la contraseña del usuario autenticado.
+ * @access  Privado (Identidad por Token)
  */
-userRouter.put(
-  "/:id/change-password",
+userRouter.patch(
+  "/change-password",
   isAuth,
   validate(changePasswordSchema),
   updatePassword,
 );
 
 /**
- * @route   PUT /api/v1/user/:id
- * @desc    Actualiza datos generales del perfil (Nombre, edad, etc.).
- * @access  Privado
+ * @route   PUT /api/v1/user/profile
+ * @desc    Actualiza datos generales del perfil propio (Nombre, edad, etc.).
+ * @access  Privado (Identidad por Token)
  */
-userRouter.put("/:id", isAuth, validate(updateValidatorSchema), updateUser);
+userRouter.put("/profile", isAuth, validate(updateValidatorSchema), updateUser);
 
 /**
- * @route   DELETE /api/v1/user/:id
- * @desc    Elimina la cuenta de usuario de forma permanente.
- * @access  Privado (Requiere validación de identidad estricta)
+ * @route   DELETE /api/v1/user/delete-me
+ * @desc    Elimina o desactiva la cuenta del usuario autenticado.
+ * @access  Privado (Identidad por Token)
  */
-userRouter.delete("/:id", isAuth, deleteUser);
+userRouter.delete("/delete-me", isAuth, deleteUser);
 
 /**
  * Exportación para su integración en el servidor principal.

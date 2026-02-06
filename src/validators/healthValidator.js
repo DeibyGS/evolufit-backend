@@ -8,7 +8,7 @@ const healthValidatorSchema = z.object({
       required_error: "El peso es obligatorio",
     })
     .min(20, "El peso debe ser realista (mínimo 20kg)")
-    .max(300, "El peso excede el límite permitido"),
+    .max(300, "El peso excede el límite permitido (maximo 300kg)"),
 
   height: z.coerce
     .number({
