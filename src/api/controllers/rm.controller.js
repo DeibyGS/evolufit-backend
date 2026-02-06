@@ -6,7 +6,7 @@
  * Almacena un nuevo cálculo de RM.
  * Utiliza el spread operator para incluir los datos del cálculo y el ID del usuario autenticado.
  */
-const RMRecord = require("../models/RMRecord");
+const RMRecord = require("../models/rm.model");
 
 const saveRM = async (req, res) => {
   try {

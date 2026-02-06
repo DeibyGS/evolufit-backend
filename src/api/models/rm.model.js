@@ -55,4 +55,6 @@ const rmSchema = new mongoose.Schema(
  * Registro del modelo en Mongoose.
  * Los documentos se almacenarán en la colección 'rmrecords'.
  */
-module.exports = mongoose.model("RMRecord", rmSchema);
+const RMRecord = mongoose.model("RMRecord", rmSchema);
+
+module.exports = RMRecord;
