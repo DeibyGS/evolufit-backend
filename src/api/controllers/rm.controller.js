@@ -2,8 +2,6 @@
  * RM & LEADERBOARD CONTROLLER - EVOLUTFIT
  * Gestión de cálculos de 1RM (Repetición Máxima) y Rankings globales.
  */
-
-const { rm } = require("fs");
 const RMRecord = require("../models/rm.model");
 
 /**
@@ -33,7 +31,7 @@ const saveRM = async (req, res) => {
     const newRecord = new RMRecord({
       ...req.body,
       userId,
-      isPersonalRecord: isNewRecord, // Opcional: guardar esto ayuda a analíticas rápidas
+      isPersonalRecord: isNewRecord,
     });
 
     // 4. Guardado en BD
