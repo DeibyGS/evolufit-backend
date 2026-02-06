@@ -1,58 +1,31 @@
-/**
- * MIDDLEWARE DE VALIDACIÓN BLINDADO
- * Rol: Senior SRE / Debugger
- */
 const validate = (schema) => (req, res, next) => {
   try {
-    // 1. Verificación de existencia del Body
-    if (!req.body || Object.keys(req.body).length === 0) {
+    // 1. Log de entrada para ver qué llega desde el Front
+    console.log("📥 Datos recibidos en el Body:", req.body);
+
+    if (!req.body) {
       return res.status(400).json({
         status: "error",
-        errors: [
-          {
-            path: "general",
-            message: "No se recibieron datos en la solicitud",
-          },
-        ],
+        errors: [{ path: "general", message: "Cuerpo de petición vacío" }],
       });
     }
 
     const result = schema.safeParse(req.body);
 
-    // 2. Manejo de error de validación
     if (!result.success) {
-      // Verificación de seguridad: ¿Existe result.error y result.error.errors?
-      // Esto evita el "Cannot read properties of undefined (reading 'map')"
-      if (!result.error || !Array.isArray(result.error.errors)) {
-        console.error(
-          "❌ Error crítico en Zod: Estructura de error inesperada",
-          result,
-        );
-        return res.status(500).json({
-          status: "error",
-          errors: [
-            {
-              path: "general",
-              message: "Error interno al procesar la validación",
-            },
-          ],
-        });
-      }
+      // 2. Mapeo ultra-defensivo (Check de cada propiedad)
+      const errorMessages = result.error.errors.map((err) => {
+        console.log("❌ Detalle error Zod:", err); // Esto saldrá en los logs de Render
 
-      // Mapeo ultra-seguro
-      const errorMessages = result.error.errors.map((err) => ({
-        // Tomamos el último elemento del path o "general"
-        path:
-          err.path && err.path.length > 0
-            ? err.path[err.path.length - 1]
-            : "general",
-        message: err.message || "Dato inválido",
-      }));
-
-      console.log(
-        "⚠️ FALLO DE VALIDACIÓN -> ENVIANDO AL FRONT:",
-        errorMessages,
-      );
+        return {
+          // Si path no existe o está vacío, ponemos 'general'
+          path:
+            err.path && err.path.length > 0
+              ? err.path[err.path.length - 1]
+              : "general",
+          message: err.message || "Error de validación",
+        };
+      });
 
       return res.status(400).json({
         status: "error",
@@ -60,15 +33,17 @@ const validate = (schema) => (req, res, next) => {
       });
     }
 
-    // 3. Éxito: Reemplazamos el body con los datos limpios de Zod (importante para coercion)
+    // 3. Éxito: Limpieza de datos
     req.body = result.data;
     next();
-  } catch (error) {
-    // 4. Captura de errores inesperados para que el servidor no se caiga
-    console.error("🔥 ERROR CATASTRÓFICO EN EL MIDDLEWARE:", error);
+  } catch (err) {
+    // 4. Captura el error real y muéstralo en la consola de Render
+    console.error("🔥 ERROR REAL DETECTADO:", err.message);
+    console.error("📋 STACK TRACE:", err.stack);
+
     return res.status(500).json({
       status: "error",
-      errors: [{ path: "server", message: "Error inesperado en el servidor" }],
+      errors: [{ path: "general", message: `Fallo crítico: ${err.message}` }],
     });
   }
 };
