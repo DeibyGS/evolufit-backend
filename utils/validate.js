@@ -1,8 +1,5 @@
 const validate = (schema) => (req, res, next) => {
   try {
-    // 1. Log de entrada para ver qué llega desde el Front
-    console.log("📥 Datos recibidos en el Body:", req.body);
-
     if (!req.body) {
       return res.status(400).json({
         status: "error",
@@ -14,7 +11,6 @@ const validate = (schema) => (req, res, next) => {
 
     if (!result.success) {
       // 1. Log profundo para ver qué está pasando
-      console.log("❌ ZOD ERROR DETECTADO");
 
       // 2. Usamos flatten() para obtener un formato más amigable
       // fieldErrors será algo como: { age: ["Debes tener..."], weight: ["Mínimo 20kg"] }

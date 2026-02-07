@@ -31,13 +31,32 @@ const createWorkout = async (req, res) => {
  * Recupera el historial de entrenamientos del usuario.
  * Ordenado por fecha descendente para mostrar lo más reciente primero.
  */
+/**
+ * Recupera el historial con paginación.
+ * URL: /api/v1/workouts/my-workouts?page=1&limit=5
+ */
 const getMyWorkouts = async (req, res) => {
   try {
-    const workouts = await Workout.find({ userId: req.user._id }).sort({
-      date: -1,
-    });
+    // 1. Extraer parámetros con valores por defecto
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 5;
+    const skip = (page - 1) * limit;
 
-    res.status(200).json(workouts);
+    // 2. Ejecutar la búsqueda con saltos (skip) y límites
+    const workouts = await Workout.find({ userId: req.user._id })
+      .sort({ createdAt: -1 }) // Usamos createdAt que es más preciso
+      .skip(skip)
+      .limit(limit);
+
+    // 3. Contar el total para que el Front sepa si hay más
+    const total = await Workout.countDocuments({ userId: req.user._id });
+
+    res.status(200).json({
+      workouts,
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
+      hasMore: page * limit < total,
+    });
   } catch (error) {
     res
       .status(500)
