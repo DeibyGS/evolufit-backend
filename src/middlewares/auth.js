@@ -13,41 +13,29 @@ const User = require("../api/models/User.model"); // Ajuste de ruta hacia el mod
  */
 const isAuth = async (req, res, next) => {
   try {
-    // 1. Obtención del token desde los headers de la petición HTTP.
-    // El cliente debe enviar: Authorization: Bearer <token>
-    const token = req.headers.authorization?.split(" ")[1];
-
-    // Si el token no existe, cortamos el flujo inmediatamente con un 401 (Unauthorized).
-    if (!token) {
-      return res.status(401).json({ message: "No se proporcionó un token" });
-    }
-
-    // 2. Verificación de integridad del token.
-    // Se comprueba que el token haya sido firmado por nuestro servidor y no haya expirado.
-    const decoded = verifyToken(token);
-
-    // 3. Validación de persistencia.
-    // Confirmamos que el usuario codificado en el token aún existe en nuestra base de datos.
-    const user = await User.findById(decoded.id);
-
-    if (!user) {
+    // 1. Extracción del token desde el header Authorization (Bearer <token>)
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res
         .status(401)
-        .json({ message: "Usuario no encontrado o cuenta eliminada" });
+        .json({ message: "Formato de autorización inválido" });
+    }
+    const token = authHeader.split(" ")[1];
+    const decoded = verifyToken(token); // Verificación del token y decodificación del payload
+    const user = await User.findById(decoded.id).select("-password").lean();
+
+    // Búsqueda del usuario en la base de datos sin el campo password
+    if (!user) {
+      return res.status(401).json({ message: "Usuario no encontrado" });
     }
 
-    // 4. Inyección de identidad en la Request.
-    // Al asignar el usuario a 'req.user', permitimos que los controladores posteriores
-    // (como los de Workouts o RM) sepan exactamente quién realiza la acción.
+    // 2. Adjuntamos el usuario al objeto req para que esté disponible en los controladores
     req.user = user;
-
-    // 5. Autorización exitosa.
-    // Saltamos al controlador final o al siguiente middleware en la cadena.
-    next();
+    next(); // Continuamos al siguiente middleware o controlador
   } catch (error) {
-    // Cualquier fallo en la verificación (token manipulado, expirado, etc.)
-    // resulta en un acceso denegado.
-    return res.status(401).json({ message: "Token inválido o expirado" });
+    const message =
+      error.name === "TokenExpiredError" ? "Token expirado" : "Token inválido";
+    return res.status(401).json({ message });
   }
 };
 

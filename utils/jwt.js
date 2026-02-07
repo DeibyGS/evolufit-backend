@@ -1,31 +1,52 @@
 /**
  * JWT UTILITIES - EVOLUTFIT
- * Herramientas para la creación y validación de JSON Web Tokens.
+ * Herramientas para la creación y validación de JSON Web Tokens con manejo de errores robusto.
  */
 
 const jwt = require("jsonwebtoken");
 
 /**
  * Genera una firma digital (Token) para un usuario.
- * @param {string} id - El identificador único del usuario (MongoDB _id).
- * @returns {string} Token JWT firmado.
  */
 const generateSign = (id) => {
-  // 1. Payload: Guardamos el ID del usuario dentro del token.
-  // 2. Secret: Utiliza una clave privada del .env para firmar el token.
-  // 3. Options: Se establece una duración de 30 días para la sesión del atleta.
-  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "30d" });
+  // Verificación preventiva: Si no hay ID, no generamos token.
+  if (!id) {
+    throw new Error("Se requiere un ID de usuario para generar el token");
+  }
+
+  // HARDENING: Usamos un algoritmo explícito (HS256) y un payload limpio.
+  return jwt.sign({ id }, process.env.JWT_SECRET, {
+    expiresIn: "30d",
+    algorithm: "HS256",
+  });
 };
 
 /**
  * Verifica la autenticidad de un token recibido.
- * @param {string} token - El token enviado por el frontend en los headers.
- * @returns {Object} El payload decodificado (contiene el id) si es válido.
- * @throws Error si el token ha expirado o la firma ha sido manipulada.
+ * Implementa un manejo de excepciones específico para ayudar al Frontend (React/React Native).
  */
 const verifyToken = (token) => {
-  // Compara el token con el JWT_SECRET para asegurar que fue emitido por este servidor.
-  return jwt.verify(token, process.env.JWT_SECRET);
+  try {
+    if (!token) {
+      throw new Error("Token no proporcionado");
+    }
+
+    // Verificación con el secreto del entorno
+    return jwt.verify(token, process.env.JWT_SECRET);
+  } catch (error) {
+    // BUG HUNTING: Diferenciamos el error para que el log sea útil
+    if (error instanceof jwt.TokenExpiredError) {
+      console.error("❌ [AUTH] Token expirado en sesión de usuario.");
+      throw new Error("TOKEN_EXPIRED");
+    }
+
+    if (error instanceof jwt.JsonWebTokenError) {
+      console.error(`❌ [AUTH] Error de firma/malformación: ${error.message}`);
+      throw new Error("TOKEN_INVALID");
+    }
+
+    throw error;
+  }
 };
 
 module.exports = {
