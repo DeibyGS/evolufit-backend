@@ -26,14 +26,14 @@ const userRouter = require("express").Router();
  * @desc    Obtiene la lista de todos los usuarios (Ranking/Admin).
  * @access  Público
  */
-userRouter.get("/", getAllUsers);
+userRouter.get("/", isAuth, getAllUsers);
 
 /**
  * @route   GET /api/v1/user/:id
  * @desc    Ver perfil público de otro atleta por su ID.
  * @access  Público
  */
-userRouter.get("/:id", getUserById);
+userRouter.get("/:id", isAuth, getUserById);
 
 /**
  * @route   PATCH /api/v1/user/change-password

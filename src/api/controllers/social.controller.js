@@ -1,22 +1,23 @@
 /**
  * SOCIAL & COMMUNITY CONTROLLER - EVOLUTFIT
- * Gestiona el feed de rutinas compartidas, interacciones (likes) y filtrado dinámico.
+ * Gestión de feed, interacciones atómicas y seguridad de recursos.
  */
 
 const Social = require("../models/social.model");
 
 /**
- * Obtención del feed social con soporte para filtros y búsqueda.
- * Implementa una arquitectura de consulta flexible (Query Building).
+ * GET /api/v1/social
+ * Obtención del feed con agregaciones optimizadas.
  */
 const getSocialPosts = async (req, res) => {
-  const { sort, muscle, search } = req.query;
+  // Extraemos también page y limit de la query
+  const { sort, muscle, search, page = 1, limit = 10 } = req.query;
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+
   let query = {};
 
-  // 1. Filtrado por grupo muscular
   if (muscle) query.muscleGroups = muscle;
 
-  // 2. Motor de búsqueda por texto (Case-Insensitive) en título y contenido
   if (search) {
     query.$or = [
       { title: { $regex: search, $options: "i" } },
@@ -25,41 +26,28 @@ const getSocialPosts = async (req, res) => {
   }
 
   try {
-    // 3. Lógica de ordenamiento dinámica (Recientes, Antiguos, Populares)
     let sortQuery = { createdAt: -1 };
+    // Ajuste para que coincida con los strings de tu Front ('recent', 'popular')
     if (sort === "oldest") sortQuery = { createdAt: 1 };
     if (sort === "popular") sortQuery = { likesCount: -1 };
 
-    // 4. Pipeline de Agregación para procesar el Feed
     const posts = await Social.aggregate([
       { $match: query },
-
-      // Añade el campo calculado likesCount basado en el tamaño del array 'likes'
       { $addFields: { likesCount: { $size: "$likes" } } },
-
       { $sort: sortQuery },
+      { $skip: skip }, // Saltamos los que ya vimos
+      { $limit: parseInt(limit) }, // Traemos solo el bloque necesario
       {
         $lookup: {
           from: "users",
           localField: "userId",
           foreignField: "_id",
+          pipeline: [{ $project: { name: 1, lastname: 1, avatar: 1 } }],
           as: "author",
         },
       },
-
-      { $unwind: "$author" }, // Aplana el array del lookup a un objeto directo
-
-      // Proyección selectiva: Exclusión estricta de datos sensibles del autor
-      {
-        $project: {
-          "author.password": 0,
-          "author.email": 0,
-          "author.isActive": 0,
-          "author.createdAt": 0,
-          "author.updatedAt": 0,
-        },
-      },
-    ]).limit(50); // Límite preventivo de registros para optimizar el ancho de banda
+      { $unwind: "$author" },
+    ]);
 
     res.status(200).json(posts);
   } catch (error) {
@@ -68,13 +56,13 @@ const getSocialPosts = async (req, res) => {
 };
 
 /**
- * Publicación de una nueva rutina o post en la comunidad.
+ * POST /api/v1/social
+ * Crea una nueva publicación vinculada al token del usuario.
  */
 const createPost = async (req, res) => {
   try {
     const { title, content, muscleGroups } = req.body;
 
-    // Vinculación automática con el usuario autenticado (inyectado por isAuth middleware)
     const newPost = new Social({
       userId: req.user._id,
       title,
@@ -85,47 +73,106 @@ const createPost = async (req, res) => {
     const savedPost = await newPost.save();
     res.status(201).json(savedPost);
   } catch (error) {
-    res.status(400).json({ message: "Error al publicar" });
+    res
+      .status(400)
+      .json({ message: "Error al publicar", error: error.message });
   }
 };
 
 /**
- * Lógica de interacción Toggle (Like/Unlike).
- * Gestiona atómicamente el array de IDs de usuarios interesados en el post.
+ * PATCH /api/v1/social/like/:id
+ * Toggle de likes usando operaciones atómicas de MongoDB.
  */
 const toggleLike = async (req, res) => {
   const { id } = req.params;
   const userId = req.user._id;
 
   try {
-    const post = await Social.findById(id);
-    if (!post) return res.status(404).json({ message: "Rutina no encontrada" });
+    // Verificamos si el usuario ya existe en el array de likes de ese post
+    const postRecord = await Social.findOne({ _id: id, likes: userId });
 
-    // Verificación de existencia del ID de usuario en el array de likes
-    const index = post.likes.indexOf(userId);
+    // Si ya existe -> $pull (quitar). Si no existe -> $addToSet (agregar sin duplicar).
+    const updateAction = postRecord
+      ? { $pull: { likes: userId } }
+      : { $addToSet: { likes: userId } };
 
-    if (index === -1) {
-      // Caso 1: Añadir Like (Interés)
-      post.likes.push(userId);
-    } else {
-      // Caso 2: Quitar Like (Desinterés)
-      post.likes.splice(index, 1);
+    const updatedPost = await Social.findByIdAndUpdate(id, updateAction, {
+      new: true,
+    });
+
+    if (!updatedPost) {
+      return res.status(404).json({ message: "Rutina no encontrada" });
     }
 
-    await post.save();
-
-    // Devuelve el nuevo conteo y el estado para actualización reactiva en el Frontend
     res.status(200).json({
-      likes: post.likes.length,
-      isLiked: index === -1,
+      likes: updatedPost.likes.length,
+      isLiked: !postRecord, // Si no existía el registro previo, ahora es true
     });
   } catch (error) {
-    res.status(500).json({ message: "Error en el servidor" });
+    res.status(500).json({ message: "Error al procesar la interacción" });
+  }
+};
+
+/**
+ * PUT /api/v1/social/:id
+ * Actualización segura: Solo el autor puede editar.
+ */
+const updatePost = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user._id;
+
+    // Desestructuración para evitar inyección de campos sensibles (como userId o likes)
+    const { title, content, muscleGroups } = req.body;
+
+    const updatedPost = await Social.findOneAndUpdate(
+      { _id: id, userId: userId }, // El filtro garantiza propiedad
+      { $set: { title, content, muscleGroups } },
+      { new: true, runValidators: true },
+    );
+
+    if (!updatedPost) {
+      return res.status(404).json({
+        message: "Post no encontrado o no tienes permisos para editarlo",
+      });
+    }
+
+    res.status(200).json(updatedPost);
+  } catch (error) {
+    res.status(500).json({ message: "Error al actualizar el post" });
+  }
+};
+
+/**
+ * DELETE /api/v1/social/:id
+ * Eliminación segura basada en identidad.
+ */
+const deletePost = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user._id;
+
+    const deletedPost = await Social.findOneAndDelete({
+      _id: id,
+      userId: userId,
+    });
+
+    if (!deletedPost) {
+      return res.status(404).json({
+        message: "No se pudo eliminar: El post no existe o no eres el autor",
+      });
+    }
+
+    res.status(200).json({ message: "Post eliminado correctamente" });
+  } catch (error) {
+    res.status(500).json({ message: "Error al eliminar el post" });
   }
 };
 
 module.exports = {
   getSocialPosts,
   createPost,
+  updatePost,
+  deletePost,
   toggleLike,
 };

@@ -1,42 +1,81 @@
 /**
  * SOCIAL & COMMUNITY ROUTER - EVOLUTFIT
- * Define los puntos de acceso para la interacción entre atletas y el feed de rutinas.
+ * Arquitectura de rutas protegida con validación integral (Body, Params, Query).
  */
-
+const socialRouter = require("express").Router();
+const validate = require("../../../utils/validate");
 const { isAuth } = require("../../middlewares/auth");
+
+// Importamos los nuevos esquemas estructurados
+const {
+  createPostSchema,
+  filterPostSchema,
+  postIdParamSchema,
+  updatePostSchema,
+} = require("../../validators/socialValidator");
+
 const {
   getSocialPosts,
   createPost,
   toggleLike,
+  updatePost,
+  deletePost,
 } = require("../controllers/social.controller");
-
-// Inicialización del router de Express
-const socialRouter = require("express").Router();
 
 /**
  * @route   GET /api/v1/social
- * @desc    Obtiene el feed de publicaciones.
- * @query   sort (popular/oldest), muscle (grupo muscular), search (texto libre).
- * @access  Privado
+ * @desc    Obtiene el feed con filtros y paginación.
  */
-socialRouter.get("/", isAuth, getSocialPosts);
+socialRouter.get(
+  "/",
+  isAuth,
+  validate(filterPostSchema), // Valida req.query (sort, muscle, search, page, limit)
+  getSocialPosts,
+);
 
 /**
  * @route   POST /api/v1/social
- * @desc    Publica una nueva rutina o contenido en el muro de la comunidad.
- * @access  Privado
+ * @desc    Publica una nueva rutina.
  */
-socialRouter.post("/", isAuth, createPost);
+socialRouter.post(
+  "/",
+  isAuth,
+  validate(createPostSchema), // Valida req.body (title, content, muscleGroups)
+  createPost,
+);
 
 /**
- * @route   POST /api/v1/social/:id/like
- * @desc    Alterna (Toggle) el estado de 'Like' en una publicación específica.
- * @param   id - Identificador único de la publicación.
- * @access  Privado
+ * @route   PATCH /api/v1/social/:id/like
+ * @desc    Toggle Like.
+ * @note    Cambiado a PATCH por ser una actualización parcial.
  */
-socialRouter.post("/:id/like", isAuth, toggleLike);
+socialRouter.patch(
+  "/:id/like",
+  isAuth,
+  validate(postIdParamSchema), // Valida req.params.id (ObjectId format)
+  toggleLike,
+);
 
 /**
- * Exportación del router para su integración en la arquitectura global de la API.
+ * @route   PUT /api/v1/social/:id
+ * @desc    Edita un post propio.
  */
+socialRouter.put(
+  "/:id",
+  isAuth,
+  validate(updatePostSchema), // Valida req.params.id Y req.body simultáneamente
+  updatePost,
+);
+
+/**
+ * @route   DELETE /api/v1/social/:id
+ * @desc    Elimina un post propio.
+ */
+socialRouter.delete(
+  "/:id",
+  isAuth,
+  validate(postIdParamSchema), // Valida req.params.id
+  deletePost,
+);
+
 module.exports = socialRouter;
