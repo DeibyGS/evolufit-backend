@@ -26,12 +26,7 @@ const {
  * @route   GET /api/v1/social
  * @desc    Obtiene el feed con filtros y paginación.
  */
-socialRouter.get(
-  "/",
-  isAuth,
-  validate(filterPostSchema), // Valida req.query (sort, muscle, search, page, limit)
-  getSocialPosts,
-);
+socialRouter.get("/", isAuth, getSocialPosts);
 
 /**
  * @route   POST /api/v1/social
