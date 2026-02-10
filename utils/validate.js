@@ -1,12 +1,5 @@
 const validate = (schema) => (req, res, next) => {
   try {
-    if (!req.body) {
-      return res.status(400).json({
-        status: "error",
-        errors: [{ path: "general", message: "Cuerpo de petición vacío" }],
-      });
-    }
-
     const result = schema.safeParse(req.body);
 
     if (!result.success) {
