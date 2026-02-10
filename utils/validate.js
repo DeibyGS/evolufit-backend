@@ -1,6 +1,11 @@
 const validate = (schema) => (req, res, next) => {
   try {
-    const result = schema.safeParse(req.body);
+    const dataToValidate = {
+      body: req.body,
+      query: req.query,
+      params: req.params,
+    };
+    const result = schema.safeParse(dataToValidate);
 
     if (!result.success) {
       // 1. Log profundo para ver qué está pasando
@@ -23,8 +28,7 @@ const validate = (schema) => (req, res, next) => {
       if (errorMessages.length === 0) {
         result.error.errors.forEach((err) => {
           errorMessages.push({
-            path:
-              err.path.length > 0 ? err.path[err.path.length - 1] : "general",
+            path: err.path.join("."),
             message: err.message,
           });
         });
@@ -42,7 +46,9 @@ const validate = (schema) => (req, res, next) => {
     }
 
     // 3. Éxito: Limpieza de datos
-    req.body = result.data;
+    req.body = result.data.body || req.body;
+    req.query = result.data.query || req.query;
+    req.params = result.data.params || req.params;
     next();
   } catch (err) {
     // 4. Captura el error real y muéstralo en la consola de Render

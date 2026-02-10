@@ -55,12 +55,7 @@ socialRouter.patch(
  * @route   PUT /api/v1/social/:id
  * @desc    Edita un post propio.
  */
-socialRouter.put(
-  "/:id",
-  isAuth,
-  validate(updatePostSchema), // Valida req.params.id Y req.body simultáneamente
-  updatePost,
-);
+socialRouter.put("/:id", isAuth, validate(updatePostSchema), updatePost);
 
 /**
  * @route   DELETE /api/v1/social/:id
