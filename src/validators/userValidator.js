@@ -1,8 +1,8 @@
 const { z } = require("zod");
 
 /**
- * VALIDADOR DE USUARIOS - EVOLUTFIT
- * Coherencia visual y técnica con el sistema de validación global.
+ * ESQUEMA MAESTRO (Base de datos)
+ * Lo mantenemos limpio para usar sus formas (.shape)
  */
 const userValidatorSchema = z.object({
   name: z
@@ -48,7 +48,12 @@ const userValidatorSchema = z.object({
     .max(100, "La contraseña es demasiado larga"),
 });
 
-// 2. Esquema de Login (Reutiliza email y password del maestro)
+// 1. Esquema de Registro (Nuevo: Envolviendo el maestro en 'body')
+const registerValidatorSchema = z.object({
+  body: userValidatorSchema,
+});
+
+// 2. Esquema de Login (Ya lo tenías bien wrapped)
 const loginValidatorSchema = z.object({
   body: z.object({
     email: userValidatorSchema.shape.email,
@@ -56,20 +61,25 @@ const loginValidatorSchema = z.object({
   }),
 });
 
-// 3. Esquema de Actualización de Perfil (Omitimos password por seguridad)
-const updateValidatorSchema = userValidatorSchema
-  .omit({ password: true })
-  .partial();
+// 3. Esquema de Actualización (Corregido: Ahora envuelve el parcial en 'body')
+const updateValidatorSchema = z.object({
+  body: userValidatorSchema.omit({ password: true, email: true }).partial(),
+});
 
-// 4. Esquema de Cambio de Contraseña
+// 4. Esquema de Cambio de Contraseña (Mantenemos tu versión corregida)
 const changePasswordSchema = z.object({
-  oldPassword: userValidatorSchema.shape.password,
-  password: userValidatorSchema.shape.password,
+  body: z.object({
+    oldPassword: z.string().min(1, "La contraseña actual es obligatoria"),
+    password: z
+      .string()
+      .min(8, "La nueva contraseña debe tener al menos 8 caracteres"),
+  }),
 });
 
 module.exports = {
-  userValidatorSchema,
-  loginValidatorSchema,
-  updateValidatorSchema,
-  changePasswordSchema,
+  userValidatorSchema, // El maestro por si lo necesitas
+  registerValidatorSchema, // Para el POST /register
+  loginValidatorSchema, // Para el POST /login
+  updateValidatorSchema, // Para el PUT /profile
+  changePasswordSchema, // Para el PATCH /change-password
 };
