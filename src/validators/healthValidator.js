@@ -1,7 +1,7 @@
 const { z } = require("zod");
 
-const healthValidatorSchema = z
-  .object({
+const healthValidatorSchema = z.object({
+  body: z.object({
     weight: z.coerce
       .number({
         invalid_type_error: "El peso debe ser un número",
@@ -38,8 +38,9 @@ const healthValidatorSchema = z
     imc: z.coerce.number().optional(),
     tmb: z.coerce.number().optional(),
     tdee: z.coerce.number().optional(),
-  })
-  .strict(); // .strict() asegura que no se permitan campos extraños
+  }),
+});
+
 module.exports = {
   healthValidatorSchema,
 };
