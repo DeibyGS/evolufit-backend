@@ -11,7 +11,6 @@ const Health = require("../models/health.model");
  */
 const saveHealthRecord = async (req, res) => {
   try {
-    console.log("👤 Usuario en la petición:", req.user);
     // 1. IMPORTANTE: Usamos los datos validados por el middleware.
     // Si el middleware hizo req.body = result.data.body, aquí ya están limpios.
     const healthData = req.body;
