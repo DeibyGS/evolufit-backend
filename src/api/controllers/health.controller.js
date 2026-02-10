@@ -11,17 +11,26 @@ const Health = require("../models/health.model");
  */
 const saveHealthRecord = async (req, res) => {
   try {
-    // 1. Creación del registro extendiendo el cuerpo de la petición con el ID del usuario (inyectado por el middleware de auth)
-    const record = new Health({ ...req.body, userId: req.user._id });
+    // 1. IMPORTANTE: Usamos los datos validados por el middleware.
+    // Si el middleware hizo req.body = result.data.body, aquí ya están limpios.
+    const healthData = req.body;
 
-    // 2. Guardado en la colección 'healthrecords'
+    if (!healthData || Object.keys(healthData).length === 0) {
+      return res.status(400).json({
+        message: "No se recibieron datos válidos después de la validación",
+      });
+    }
+
+    const record = new Health({
+      ...healthData,
+      userId: req.user._id, // Inyectamos el ID del usuario autenticado
+    });
+
     await record.save();
-
-    // 3. Respuesta con el objeto creado (HTTP 201 Created)
     res.status(201).json(record);
   } catch (error) {
-    // Error de validación o fallo en la base de datos
-    res.status(400).json({ message: "Error al guardar" });
+    console.error("❌ Error en SaveHealthRecord:", error);
+    res.status(400).json({ message: error.message || "Error al guardar" });
   }
 };
 

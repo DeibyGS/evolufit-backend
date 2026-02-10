@@ -70,9 +70,7 @@ const updateValidatorSchema = z.object({
 const changePasswordSchema = z.object({
   body: z.object({
     oldPassword: z.string().min(1, "La contraseña actual es obligatoria"),
-    password: z
-      .string()
-      .min(8, "La nueva contraseña debe tener al menos 8 caracteres"),
+    password: userValidatorSchema.shape.password,
   }),
 });
 
