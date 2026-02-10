@@ -50,8 +50,10 @@ const userValidatorSchema = z.object({
 
 // 2. Esquema de Login (Reutiliza email y password del maestro)
 const loginValidatorSchema = z.object({
-  email: userValidatorSchema.shape.email,
-  password: userValidatorSchema.shape.password,
+  body: z.object({
+    email: userValidatorSchema.shape.email,
+    password: userValidatorSchema.shape.password,
+  }),
 });
 
 // 3. Esquema de Actualización de Perfil (Omitimos password por seguridad)
