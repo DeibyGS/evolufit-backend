@@ -5,6 +5,11 @@ const validate = (schema) => (req, res, next) => {
       query: req.query,
       params: req.params,
     };
+
+    console.log(
+      "🔍 Datos recibidos en el validador:",
+      JSON.stringify(dataToValidate, null, 2),
+    );
     const result = schema.safeParse(dataToValidate);
 
     if (!result.success) {
