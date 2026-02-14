@@ -22,7 +22,8 @@ const healthValidatorSchema = z.object({
     age: z.coerce
       .number({ required_error: "La edad es obligatoria" })
       .int("La edad debe ser un número entero")
-      .min(14, "Debes tener al menos 14 años"),
+      .min(14, "Debes tener al menos 14 años")
+      .max(120, "La edad máxima es 120 años"),
 
     gender: z.enum(["hombre", "mujer"], {
       invalid_type_error: "Selecciona un género válido",

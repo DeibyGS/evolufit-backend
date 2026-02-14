@@ -16,13 +16,21 @@ const rmRouter = require("./src/api/routes/rm.router");
 const healthRouter = require("./src/api/routes/health.route");
 const socialRouter = require("./src/api/routes/social.router");
 
-/**
- * CONFIGURACIÓN DE CORS
- * Permite que tu frontend (ej. desde Vercel o localhost) se comunique con este servidor.
- * origin: "*" permite acceso desde cualquier origen (ideal para desarrollo y despliegue inicial).
- */
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",")
+  : [];
 const corsOptions = {
-  origin: "*",
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.error(`Bloqueado por CORS: Origen no permitido - ${origin}`);
+      callback(new Error("Acceso denegado por políticas de CORS de EvolutFit"));
+    }
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+  allowHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
   optionsSuccessStatus: 200,
 };
 

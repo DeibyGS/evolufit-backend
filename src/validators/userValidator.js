@@ -50,7 +50,13 @@ const userValidatorSchema = z.object({
 
 // 1. Esquema de Registro (Nuevo: Envolviendo el maestro en 'body')
 const registerValidatorSchema = z.object({
-  body: userValidatorSchema,
+  body: z.object({
+    name: userValidatorSchema.shape.name,
+    lastname: userValidatorSchema.shape.lastname,
+    age: userValidatorSchema.shape.age,
+    email: userValidatorSchema.shape.email,
+    password: userValidatorSchema.shape.password,
+  }),
 });
 
 // 2. Esquema de Login (Ya lo tenías bien wrapped)

@@ -23,7 +23,7 @@ const saveHealthRecord = async (req, res) => {
 
     const record = new Health({
       ...healthData,
-      userId: req.user._id, // Inyectamos el ID del usuario autenticado
+      userId: req.user._id,
     });
 
     await record.save();

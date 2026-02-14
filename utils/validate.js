@@ -9,56 +9,37 @@ const validate = (schema) => (req, res, next) => {
     const result = schema.safeParse(dataToValidate);
 
     if (!result.success) {
-      // 1. Log profundo para ver qué está pasando
-
-      // 2. Usamos flatten() para obtener un formato más amigable
-      // fieldErrors será algo como: { age: ["Debes tener..."], weight: ["Mínimo 20kg"] }
-      const formattedErrors = result.error.flatten().fieldErrors;
-
-      const errorMessages = [];
-
-      // 3. Convertimos el objeto de fieldErrors en nuestro array estándar
-      for (const field in formattedErrors) {
-        errorMessages.push({
-          path: field,
-          message: formattedErrors[field][0], // Tomamos el primer mensaje de error del campo
-        });
-      }
-
-      // 4. Si por algo no hay errores de campo, buscamos errores de formulario (formErrors)
-      if (errorMessages.length === 0) {
-        result.error.errors.forEach((err) => {
-          errorMessages.push({
-            path: err.path.join("."),
-            message: err.message,
-          });
-        });
-      }
+      // Usamos .issues para tener acceso total a la jerarquía del error
+      const errorMessages = result.error.issues.map((issue) => {
+        return {
+          // Si el path es ['body', 'weight'], tomamos solo 'weight'
+          // Si el path es solo ['body'], lo dejamos como 'body'
+          path:
+            issue.path.length > 1
+              ? issue.path[issue.path.length - 1]
+              : issue.path[0],
+          message: issue.message,
+        };
+      });
 
       console.log("📤 Enviando al front:", errorMessages);
 
       return res.status(400).json({
         status: "error",
-        errors:
-          errorMessages.length > 0
-            ? errorMessages
-            : [{ path: "general", message: "Error de validación" }],
+        errors: errorMessages,
       });
     }
 
-    // 3. Éxito: Limpieza de datos
+    // Éxito: Limpieza de datos (Zod coerce convierte strings a numbers aquí)
     req.body = result.data.body || req.body;
     req.query = result.data.query || req.query;
     req.params = result.data.params || req.params;
     next();
   } catch (err) {
-    // 4. Captura el error real y muéstralo en la consola de Render
-    console.error("🔥 ERROR REAL DETECTADO:", err.message);
-    console.error("📋 STACK TRACE:", err.stack);
-
+    console.error("🔥 ERROR CRÍTICO:", err);
     return res.status(500).json({
       status: "error",
-      errors: [{ path: "general", message: `Fallo crítico: ${err.message}` }],
+      errors: [{ path: "general", message: "Fallo interno del validador" }],
     });
   }
 };
