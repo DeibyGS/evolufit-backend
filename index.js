@@ -83,7 +83,7 @@ app.use((err, req, res, next) => {
 
 /**
  * INICIALIZACIÓN DEL SERVIDOR
- * El puerto se toma de las variables de entorno (necesario para Render/Railway) o usa el 3000 por defecto.
+ * El puerto se toma de las variables de entorno usa el 3000 por defecto.
  */
 const PORT = process.env.PORT || 8080;
 const isDev = process.env.NODE_ENV !== "production";
