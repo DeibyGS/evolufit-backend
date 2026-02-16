@@ -85,7 +85,14 @@ app.use((err, req, res, next) => {
  * INICIALIZACIÓN DEL SERVIDOR
  * El puerto se toma de las variables de entorno (necesario para Render/Railway) o usa el 3000 por defecto.
  */
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server is running on port http://localhost:${PORT}`);
+const PORT = process.env.PORT || 8080;
+const isDev = process.env.NODE_ENV !== "production";
+
+// Usamos "0.0.0.0" para que Render pueda exponer el servicio correctamente
+app.listen(PORT, "0.0.0.0", () => {
+  const host = isDev ? `http://localhost:${PORT}` : "Production Server";
+  console.log(
+    `🚀 Server running in ${isDev ? "DEVELOPMENT" : "PRODUCTION"} mode`,
+  );
+  console.log(`🔗 URL: ${host}`);
 });
