@@ -47,23 +47,25 @@ const exerciseSchema = z.object({
  * Esquema Maestro de Workout (El que usaremos en la ruta POST)
  */
 const workoutValidatorSchema = z.object({
-  routineName: z
-    .string()
-    .trim()
-    .max(50, "El nombre de la rutina es demasiado largo")
-    .optional()
-    .default("Entrenamiento sin nombre"),
+  body: z.object({
+    routineName: z
+      .string()
+      .trim()
+      .max(50, "El nombre de la rutina es demasiado largo")
+      .optional()
+      .default("Entrenamiento sin nombre"),
 
-  exercises: z
-    .array(exerciseSchema)
-    .min(1, "La rutina debe tener al menos un ejercicio"),
+    exercises: z
+      .array(exerciseSchema)
+      .min(1, "La rutina debe tener al menos un ejercicio"),
 
-  date: z.coerce
-    .date({
-      invalid_type_error: "La fecha tiene un formato inválido",
-    })
-    .max(new Date(), "No puedes registrar un entrenamiento con fecha futura")
-    .default(() => new Date()),
+    date: z.coerce
+      .date({
+        invalid_type_error: "La fecha tiene un formato inválido",
+      })
+      .max(new Date(), "No puedes registrar un entrenamiento con fecha futura")
+      .default(() => new Date()),
+  }),
 });
 
 module.exports = { workoutValidatorSchema };
