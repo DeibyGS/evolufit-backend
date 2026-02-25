@@ -86,40 +86,50 @@ const deleteRM = async (req, res) => {
  * Utiliza un pipeline de agregación para obtener los récords más altos por ejercicio.
  */
 const getLeaderboard = async (req, res) => {
+  // 1. Extraemos parámetros de la query con valores por defecto
+  const { page = 1, limit = 15 } = req.query;
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+
   try {
-    // Agregación avanzada para optimizar la carga de datos en el servidor
+    // 2. Definimos el pipeline de agregación siguiendo tu estilo
     const leaders = await RMRecord.aggregate([
-      // 1. Ordenar todos los registros por el resultado de la fórmula de Brzycki
+      // Ordenamos primero para que el $group tome el mayor valor
       { $sort: { brzyckiResult: -1 } },
 
-      // 2. Agrupar para obtener solo el récord más alto de cada ejercicio distinto
+      // Agrupamos por ejercicio para obtener el récord más alto
       {
         $group: {
-          _id: "$exerciseName", // Identificador de grupo: el nombre del ejercicio
-          maxWeight: { $first: "$brzyckiResult" }, // El valor más alto tras el sort previo
-          userName: { $first: "$userId" },
+          _id: "$exerciseName",
+          maxWeight: { $first: "$brzyckiResult" },
+          userId: { $first: "$userId" },
           muscleGroup: { $first: "$muscleGroup" },
           date: { $first: "$createdAt" },
         },
       },
 
-      // 3. Enriquecer los datos (Join) con la colección de usuarios
+      // Volvemos a ordenar el ranking final por peso (del más fuerte al menos)
+      { $sort: { maxWeight: -1 } },
+
+      // --- PAGINACIÓN (Igual que en tus Social Posts) ---
+      { $skip: skip },
+      { $limit: parseInt(limit) },
+
+      // Lookup para traer datos del autor del récord
       {
         $lookup: {
-          from: "users", // Colección de origen
-          localField: "userName", // Campo en RMRecord
-          foreignField: "_id", // Campo en Users
-          as: "user", // Nombre del array resultante
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          pipeline: [{ $project: { name: 1, lastname: 1, avatar: 1 } }],
+          as: "user",
         },
       },
-
-      // 4. Transformar el array 'user' en un objeto directo
       { $unwind: "$user" },
     ]);
 
-    // Respuesta con el ranking procesado
     res.status(200).json(leaders);
   } catch (error) {
+    console.error("🔥 Error en getLeaderboard:", error);
     res.status(500).json({ message: "Error al cargar el ranking" });
   }
 };
