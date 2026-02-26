@@ -54,11 +54,26 @@ const saveRM = async (req, res) => {
  */
 const getMyRMs = async (req, res) => {
   try {
-    // Filtrado estricto por userId para garantizar privacidad
-    const records = await RMRecord.find({ userId: req.user._id }).sort({
-      createdAt: -1,
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 15;
+    const skip = (page - 1) * limit;
+
+    // Ejecutamos ambas consultas en paralelo para ganar velocidad
+    const [records, total] = await Promise.all([
+      RMRecord.find({ userId: req.user._id })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      RMRecord.countDocuments({ userId: req.user._id }), // Cuenta el total de marcas
+    ]);
+
+    res.status(200).json({
+      records,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      totalRecords: total,
+      hasNextPage: skip + records.length < total, // Útil para el front
     });
-    res.status(200).json(records);
   } catch (error) {
     res.status(500).json({ message: "Error al obtener registros" });
   }
