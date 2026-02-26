@@ -72,7 +72,7 @@ const getMyRMs = async (req, res) => {
       totalPages: Math.ceil(total / limit),
       currentPage: page,
       totalRecords: total,
-      hasNextPage: skip + records.length < total, // Útil para el front
+      hasNextPage: skip + records.length < total,
     });
   } catch (error) {
     res.status(500).json({ message: "Error al obtener registros" });
@@ -100,18 +100,19 @@ const deleteRM = async (req, res) => {
  * Genera el Ranking Global (Leaderboard).
  * Utiliza un pipeline de agregación para obtener los récords más altos por ejercicio.
  */
+/**
+ * Genera el Ranking Global (Leaderboard).
+ * Ahora con estructura de paginación completa.
+ */
 const getLeaderboard = async (req, res) => {
-  // 1. Extraemos parámetros de la query con valores por defecto
-  const { page = 1, limit = 15 } = req.query;
-  const skip = (parseInt(page) - 1) * parseInt(limit);
-
   try {
-    // 2. Definimos el pipeline de agregación siguiendo tu estilo
-    const leaders = await RMRecord.aggregate([
-      // Ordenamos primero para que el $group tome el mayor valor
-      { $sort: { brzyckiResult: -1 } },
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 15;
+    const skip = (page - 1) * limit;
 
-      // Agrupamos por ejercicio para obtener el récord más alto
+    // 1. Pipeline para los registros
+    const recordsPipeline = [
+      { $sort: { brzyckiResult: -1 } },
       {
         $group: {
           _id: "$exerciseName",
@@ -121,15 +122,9 @@ const getLeaderboard = async (req, res) => {
           date: { $first: "$createdAt" },
         },
       },
-
-      // Volvemos a ordenar el ranking final por peso (del más fuerte al menos)
       { $sort: { maxWeight: -1 } },
-
-      // --- PAGINACIÓN (Igual que en tus Social Posts) ---
       { $skip: skip },
-      { $limit: parseInt(limit) },
-
-      // Lookup para traer datos del autor del récord
+      { $limit: limit },
       {
         $lookup: {
           from: "users",
@@ -140,9 +135,26 @@ const getLeaderboard = async (req, res) => {
         },
       },
       { $unwind: "$user" },
+    ];
+
+    // 2. Ejecutamos el pipeline y el conteo de grupos únicos en paralelo
+    const [leaders, totalGroups] = await Promise.all([
+      RMRecord.aggregate(recordsPipeline),
+      RMRecord.aggregate([
+        { $group: { _id: "$exerciseName" } },
+        { $count: "total" },
+      ]),
     ]);
 
-    res.status(200).json(leaders);
+    const total = totalGroups[0]?.total || 0;
+
+    res.status(200).json({
+      records: leaders,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      totalRecords: total,
+      hasNextPage: skip + leaders.length < total,
+    });
   } catch (error) {
     console.error("🔥 Error en getLeaderboard:", error);
     res.status(500).json({ message: "Error al cargar el ranking" });
