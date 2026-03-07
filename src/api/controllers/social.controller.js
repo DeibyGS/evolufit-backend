@@ -10,14 +10,13 @@ const Social = require("../models/social.model");
  * Obtención del feed con agregaciones optimizadas.
  */
 const getSocialPosts = async (req, res) => {
-  // Extraemos también page y limit de la query
   const { sort, muscle, search, page = 1, limit = 10 } = req.query;
-  const skip = (parseInt(page) - 1) * parseInt(limit);
+  const pageNum = parseInt(page);
+  const limitNum = parseInt(limit);
+  const skip = (pageNum - 1) * limitNum;
 
   let query = {};
-
   if (muscle) query.muscleGroups = muscle;
-
   if (search) {
     query.$or = [
       { title: { $regex: search, $options: "i" } },
@@ -27,16 +26,15 @@ const getSocialPosts = async (req, res) => {
 
   try {
     let sortQuery = { createdAt: -1 };
-    // Ajuste para que coincida con los strings de tu Front ('recent', 'popular')
     if (sort === "oldest") sortQuery = { createdAt: 1 };
-    if (sort === "popular") sortQuery = { likesCount: -1 };
+    // Nota: popular requiere manejar el sort después de addFields
 
     const posts = await Social.aggregate([
       { $match: query },
       { $addFields: { likesCount: { $size: "$likes" } } },
-      { $sort: sortQuery },
-      { $skip: skip }, // Saltamos los que ya vimos
-      { $limit: parseInt(limit) }, // Traemos solo el bloque necesario
+      { $sort: sort === "popular" ? { likesCount: -1 } : sortQuery },
+      { $skip: skip },
+      { $limit: limitNum },
       {
         $lookup: {
           from: "users",
@@ -49,7 +47,15 @@ const getSocialPosts = async (req, res) => {
       { $unwind: "$author" },
     ]);
 
-    res.status(200).json(posts);
+    // Calculamos si hay más páginas
+    const totalPosts = await Social.countDocuments(query);
+    const hasNextPage = skip + posts.length < totalPosts;
+
+    res.status(200).json({
+      posts,
+      hasNextPage,
+      totalPosts,
+    });
   } catch (error) {
     res.status(500).json({ message: "Error al obtener la comunidad" });
   }
