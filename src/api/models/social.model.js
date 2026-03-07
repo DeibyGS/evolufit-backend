@@ -4,6 +4,7 @@
  */
 
 const mongoose = require("mongoose");
+const { MUSCLE_GROUPS } = require("../../constants/exerciseList");
 const { Schema } = mongoose;
 
 /**
@@ -47,6 +48,7 @@ const socialSchema = new Schema(
     muscleGroups: [
       {
         type: String,
+        enum: MUSCLE_GROUPS,
         required: true,
       },
     ],

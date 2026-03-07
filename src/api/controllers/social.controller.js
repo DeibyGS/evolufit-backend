@@ -10,17 +10,14 @@ const Social = require("../models/social.model");
  * Obtención del feed con agregaciones optimizadas.
  */
 const getSocialPosts = async (req, res) => {
-  // Extraemos parámetros con valores por defecto
+  // Extraemos también page y limit de la query
   const { sort, muscle, search, page = 1, limit = 10 } = req.query;
-
-  const pageNum = parseInt(page);
-  const limitNum = parseInt(limit);
-  const skip = (pageNum - 1) * limitNum;
+  const skip = (parseInt(page) - 1) * parseInt(limit);
 
   let query = {};
 
-  // Filtros de búsqueda
   if (muscle) query.muscleGroups = muscle;
+
   if (search) {
     query.$or = [
       { title: { $regex: search, $options: "i" } },
@@ -29,43 +26,31 @@ const getSocialPosts = async (req, res) => {
   }
 
   try {
-    // Definición del orden
     let sortQuery = { createdAt: -1 };
+    // Ajuste para que coincida con los strings de tu Front ('recent', 'popular')
     if (sort === "oldest") sortQuery = { createdAt: 1 };
     if (sort === "popular") sortQuery = { likesCount: -1 };
 
-    // Ejecutamos en paralelo para mayor velocidad
-    const [posts, totalCount] = await Promise.all([
-      Social.aggregate([
-        { $match: query },
-        { $addFields: { likesCount: { $size: "$likes" } } },
-        { $sort: sortQuery },
-        { $skip: skip },
-        { $limit: limitNum },
-        {
-          $lookup: {
-            from: "users",
-            localField: "userId",
-            foreignField: "_id",
-            pipeline: [{ $project: { name: 1, lastname: 1, avatar: 1 } }],
-            as: "author",
-          },
+    const posts = await Social.aggregate([
+      { $match: query },
+      { $addFields: { likesCount: { $size: "$likes" } } },
+      { $sort: sortQuery },
+      { $skip: skip }, // Saltamos los que ya vimos
+      { $limit: parseInt(limit) }, // Traemos solo el bloque necesario
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          pipeline: [{ $project: { name: 1, lastname: 1, avatar: 1 } }],
+          as: "author",
         },
-        { $unwind: "$author" },
-      ]),
-      Social.countDocuments(query),
+      },
+      { $unwind: "$author" },
     ]);
 
-    // Devolvemos el mismo formato que el Leaderboard
-    res.status(200).json({
-      posts: posts, // Cambiado de 'records' a 'posts' para que sea semántico
-      totalPages: Math.ceil(totalCount / limitNum),
-      currentPage: pageNum,
-      totalPosts: totalCount,
-      hasNextPage: skip + posts.length < totalCount,
-    });
+    res.status(200).json(posts);
   } catch (error) {
-    console.error("🔥 Error en getSocialPosts:", error);
     res.status(500).json({ message: "Error al obtener la comunidad" });
   }
 };
