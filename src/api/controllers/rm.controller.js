@@ -107,7 +107,7 @@ const deleteRM = async (req, res) => {
 const getLeaderboard = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 15;
+    const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
     // 1. Pipeline para los registros

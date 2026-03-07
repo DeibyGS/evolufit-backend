@@ -11,7 +11,10 @@ const Social = require("../models/social.model");
  */
 const getSocialPosts = async (req, res) => {
   // Extraemos también page y limit de la query
-  const { sort, muscle, search, page = 1, limit = 10 } = req.query;
+  const { sort, muscle, search } = req.query;
+
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
   const skip = (parseInt(page) - 1) * parseInt(limit);
 
   let query = {};
@@ -22,6 +25,7 @@ const getSocialPosts = async (req, res) => {
     query.$or = [
       { title: { $regex: search, $options: "i" } },
       { content: { $regex: search, $options: "i" } },
+      { muscleGroups: { $regex: search, $options: "i" } },
     ];
   }
 
@@ -31,7 +35,7 @@ const getSocialPosts = async (req, res) => {
     if (sort === "oldest") sortQuery = { createdAt: 1 };
     if (sort === "popular") sortQuery = { likesCount: -1 };
 
-    const posts = await Social.aggregate([
+    const postsPipeline = [
       { $match: query },
       { $addFields: { likesCount: { $size: "$likes" } } },
       { $sort: sortQuery },
@@ -47,9 +51,20 @@ const getSocialPosts = async (req, res) => {
         },
       },
       { $unwind: "$author" },
+    ];
+
+    const [posts, totalPosts] = await Promise.all([
+      Social.aggregate(postsPipeline),
+      Social.countDocuments(query),
     ]);
 
-    res.status(200).json(posts);
+    res.status(200).json({
+      posts,
+      totalPages: Math.ceil(totalPosts / limit),
+      currentPage: page,
+      totalPosts,
+      hasNextPage: page * limit < totalPosts,
+    });
   } catch (error) {
     res.status(500).json({ message: "Error al obtener la comunidad" });
   }
