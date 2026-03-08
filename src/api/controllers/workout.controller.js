@@ -55,7 +55,7 @@ const getMyWorkouts = async (req, res) => {
       workouts,
       currentPage: page,
       totalPages: Math.ceil(total / limit),
-      hasMore: page * limit < total,
+      hasNextPage: page * limit < total,
     });
   } catch (error) {
     res
