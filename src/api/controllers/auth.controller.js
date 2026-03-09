@@ -166,5 +166,41 @@ const resetPassword = async (req, res) => {
     res.status(500).json({ message: "Error al restablecer la contraseña." });
   }
 };
+const changePasswordProfile = async (req, res) => {
+  try {
+    const { oldPassword, password } = req.body;
+    const userId = req.user._id; // Obtenido del middleware isAuth
 
-module.exports = { register, login, forgotPassword, resetPassword };
+    // 1. Buscar usuario
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+
+    // 2. Verificar contraseña actual
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(401).json({
+        message: "La contraseña actual es incorrecta",
+        status: "error",
+      });
+    }
+
+    // 3. Actualizar con la nueva (el pre-save del modelo hará el hash)
+    user.password = password;
+    await user.save();
+
+    res.status(200).json({ message: "Contraseña actualizada correctamente" });
+  } catch (error) {
+    console.error("🔥 Error en changePasswordProfile:", error);
+    res.status(500).json({ message: "Error al actualizar la contraseña" });
+  }
+};
+
+module.exports = {
+  register,
+  login,
+  forgotPassword,
+  resetPassword,
+  changePasswordProfile,
+};

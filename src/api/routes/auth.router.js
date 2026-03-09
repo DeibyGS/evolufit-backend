@@ -6,16 +6,18 @@
 const {
   register,
   login,
-  forgotPassword, // Envía el correo con el token
-  resetPassword, // Procesa el cambio físico de contraseña
+  forgotPassword,
+  resetPassword,
+  changePasswordProfile,
 } = require("../controllers/auth.controller");
 
 const validate = require("../../../utils/validate");
 const {
   loginValidatorSchema,
   registerValidatorSchema,
+  changePasswordSchema,
 } = require("../../validators/userValidator");
-
+const { isAuth } = require("../../middlewares/auth");
 // Inicialización del router de Express
 const authRouter = require("express").Router();
 
@@ -42,5 +44,12 @@ authRouter.post("/forgot-password", forgotPassword);
  * @desc    Establece la nueva contraseña usando el token de la URL.
  */
 authRouter.post("/reset-password/:token", resetPassword);
+
+authRouter.post(
+  "/change-password",
+  isAuth,
+  validate(changePasswordSchema),
+  changePasswordProfile,
+);
 
 module.exports = authRouter;
