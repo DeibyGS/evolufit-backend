@@ -23,8 +23,11 @@ const rmValidatorSchema = z.object({
         invalid_type_error: "El peso debe ser un número",
         required_error: "El peso es obligatorio",
       })
-      .min(0, "El peso no puede ser negativo")
-      .max(500, "El peso excede el límite permitido (500 kg)"),
+      .min(
+        20,
+        "El peso mínimo es 20 kg; por debajo no es necesario calcular el 1RM",
+      )
+      .max(500, "Introduce un peso realista (máx. 500 kg)"),
 
     repsDone: z.coerce
       .number({
@@ -33,7 +36,7 @@ const rmValidatorSchema = z.object({
       })
       .int("Las repeticiones deben ser un número entero")
       .min(1, "Al menos una repetición es necesaria")
-      .max(20, "Las fórmulas de RM pierden precisión por encima de 20 reps"),
+      .max(15, "Las fórmulas de RM pierden precisión por encima de 15 reps"),
 
     // Campos de resultados que envías desde el frontend
     epleyResult: z.coerce
