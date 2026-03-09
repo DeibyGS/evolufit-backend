@@ -24,7 +24,7 @@ const rmValidatorSchema = z.object({
         required_error: "El peso es obligatorio",
       })
       .min(0, "El peso no puede ser negativo")
-      .max(600, "El peso excede el límite permitido (600 kg)"),
+      .max(500, "El peso excede el límite permitido (500 kg)"),
 
     repsDone: z.coerce
       .number({
