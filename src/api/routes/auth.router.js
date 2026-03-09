@@ -45,7 +45,7 @@ authRouter.post("/forgot-password", forgotPassword);
  */
 authRouter.post("/reset-password/:token", resetPassword);
 
-authRouter.post(
+authRouter.patch(
   "/change-password",
   isAuth,
   validate(changePasswordSchema),
