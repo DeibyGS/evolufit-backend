@@ -77,6 +77,43 @@ El proyecto está organizado siguiendo el patrón **Modelo-Vista-Controlador** p
 
 ---
 
+## 🧪 Tests
+
+La suite de tests cubre los 6 módulos de la API con **55 tests** usando Jest + Supertest + MongoDB In-Memory.
+
+### Ejecutar tests
+
+```bash
+# Todos los tests con reporte de coverage
+npm test
+
+# Modo watch (re-ejecuta al guardar)
+npm run test:watch
+```
+
+### Resultados actuales
+
+| Suite | Tests | Estado |
+|-------|-------|--------|
+| auth.test.js | 6 | ✅ |
+| user.test.js | 9 | ✅ |
+| workout.test.js | 10 | ✅ |
+| health.test.js | 7 | ✅ |
+| rm.test.js | 8 | ✅ |
+| social.test.js | 15 | ✅ |
+| **Total** | **55** | **✅ 100%** |
+
+**Coverage global: 83.67% líneas** (umbral mínimo: 80%)
+
+### Arquitectura de tests
+
+- `tests/helpers/db.js` — Levanta MongoDB en memoria con `mongodb-memory-server`
+- `tests/helpers/auth.js` — Helper para crear usuarios y tokens JWT de prueba
+- Cada suite usa `beforeAll/afterEach/afterAll` para aislar datos entre tests
+- El mailer (Nodemailer) se mockea para no enviar emails reales
+
+---
+
 ## ⚙️ Configuración Local
 
 1.  Clona el repositorio e instala dependencias: `npm install`.
