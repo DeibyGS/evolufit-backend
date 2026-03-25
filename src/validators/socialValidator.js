@@ -1,12 +1,22 @@
+/**
+ * VALIDADOR SOCIAL - EVOLUTFIT
+ *
+ * Define los esquemas Zod para las rutas del módulo de comunidad.
+ * Cada esquema valida una sección específica del request (body, params o query).
+ *
+ * @decision `postIdParamSchema` valida el formato del ID con regex de ObjectId MongoDB
+ *           (`/^[0-9a-fA-F]{24}$/`) en lugar de dejarlo pasar y que Mongoose lance
+ *           un CastError. Así el error llega al cliente como 400 (validación)
+ *           y no como 500 (error interno del servidor).
+ *
+ * @decision `updatePostSchema` se construye con `.merge()` combinando la validación
+ *           del ID en params y del body de creación, reutilizando esquemas ya definidos.
+ */
+
 const { z } = require("zod");
 const { MUSCLE_GROUPS } = require("../constants/exerciseList");
 
-/**
- * VALIDADOR SOCIAL - EVOLUTFIT
- * Estructurado para validación directa de (req.body, req.query, req.params)
- */
-
-// 1. Esquema base para el ID de los parámetros (Reutilizable para Like, Update, Delete)
+/** Valida que `req.params.id` tenga formato válido de ObjectId de MongoDB (24 hex). */
 const postIdParamSchema = z.object({
   params: z.object({
     id: z
@@ -15,7 +25,7 @@ const postIdParamSchema = z.object({
   }),
 });
 
-// 2. Esquema para la creación de un Post (req.body)
+/** Valida el body para crear una nueva publicación (POST /api/social). */
 const createPostSchema = z.object({
   body: z.object({
     title: z
@@ -48,7 +58,11 @@ const createPostSchema = z.object({
   }),
 });
 
-// 3. Esquema para los filtros del Feed (req.query) - Sincronizado con tu Front
+/**
+ * Valida los parámetros de filtrado del feed (GET /api/social).
+ * Los valores de `sort` coinciden con los strings que envía el frontend
+ * ('recent', 'popular', 'oldest').
+ */
 const filterPostSchema = z.object({
   query: z.object({
     sort: z
@@ -87,8 +101,9 @@ const filterPostSchema = z.object({
 });
 
 /**
- * 4. Esquema Combinado para UPDATE (PUT /:id)
- * Valida que el ID en params sea correcto Y que el body sea válido.
+ * Esquema combinado para actualizar un post (PUT /api/social/:id).
+ * Valida simultáneamente el ID en params y el body con los mismos campos que la creación.
+ * Zod `.merge()` combina dos esquemas en uno sin duplicar lógica.
  */
 const updatePostSchema = postIdParamSchema.merge(createPostSchema);
 

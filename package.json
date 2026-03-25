@@ -4,8 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "jest --coverage",
-    "test:watch": "jest --watch",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
+    "test:watch": "vitest",
     "start": "node index.js",
     "dev": "nodemon index.js"
   },
@@ -14,10 +16,12 @@
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
-    "jest": "^30.0.0",
-    "supertest": "^7.0.0",
+    "@vitest/coverage-v8": "^3.2.4",
+    "@vitest/ui": "^3.2.4",
     "mongodb-memory-server": "^10.1.2",
-    "nodemon": "^3.1.11"
+    "nodemon": "^3.1.11",
+    "supertest": "^7.0.0",
+    "vitest": "^3.2.4"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

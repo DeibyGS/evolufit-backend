@@ -1,8 +1,35 @@
+/**
+ * VALIDADOR DE ENTRENAMIENTOS - EVOLUTFIT
+ *
+ * Define los esquemas Zod para validar el body de las rutas de workout
+ * antes de que lleguen al controlador.
+ *
+ * Estructura jerárquica (refleja el modelo de MongoDB):
+ *   workoutValidatorSchema
+ *     └── body
+ *           ├── routineName
+ *           ├── exercises[]  (exerciseSchema)
+ *           │     ├── muscleGroup
+ *           │     ├── exerciseName
+ *           │     └── sets[]  (setSchema)
+ *           │           ├── reps
+ *           │           └── weight
+ *           └── date
+ *
+ * @decision Se usa `z.coerce.number()` en lugar de `z.number()` para los campos
+ *           numéricos porque el body HTTP llega como strings si viene de un formulario.
+ *           `coerce` convierte automáticamente "10" → 10 antes de validar.
+ *
+ * @decision Los nombres de ejercicios y grupos musculares se validan con `z.enum`
+ *           contra la lista centralizada en `exerciseList.js`, garantizando que
+ *           solo se guardan valores conocidos en la base de datos.
+ */
+
 const { z } = require("zod");
 const { MUSCLE_GROUPS, EXERCISE_NAMES } = require("../constants/exerciseList");
 
 /**
- * Esquema de Series (El nivel más bajo)
+ * Esquema de una serie individual (nivel más granular del entrenamiento).
  */
 const setSchema = z.object({
   reps: z.coerce
@@ -24,7 +51,7 @@ const setSchema = z.object({
 });
 
 /**
- * Esquema de Ejercicio (Contiene un array de series)
+ * Esquema de un ejercicio (contiene nombre, grupo muscular y sus series).
  */
 const exerciseSchema = z.object({
   muscleGroup: z.enum(MUSCLE_GROUPS, {
@@ -44,7 +71,9 @@ const exerciseSchema = z.object({
 });
 
 /**
- * Esquema Maestro de Workout (El que usaremos en la ruta POST)
+ * Esquema raíz que envuelve el body completo del POST /api/workouts.
+ * El envoltorio `{ body: z.object({...}) }` permite que el middleware `validate()`
+ * aplique la validación directamente sobre `req.body`.
  */
 const workoutValidatorSchema = z.object({
   body: z.object({

@@ -1,12 +1,13 @@
 /**
- * SOCIAL & COMMUNITY ROUTER - EVOLUTFIT
- * Arquitectura de rutas protegida con validación integral (Body, Params, Query).
+ * ROUTER SOCIAL Y COMUNIDAD - EVOLUTFIT
+ * Rutas del módulo de feed y publicaciones. Todas son privadas (requieren isAuth).
+ * Cada ruta aplica validación específica: body, params.id o ambos según el caso.
  */
 const socialRouter = require("express").Router();
 const validate = require("../../../utils/validate");
 const { isAuth } = require("../../middlewares/auth");
 
-// Importamos los nuevos esquemas estructurados
+// Esquemas de validación Zod para cada tipo de operación del módulo social
 const {
   createPostSchema,
   filterPostSchema,
@@ -42,7 +43,7 @@ socialRouter.post(
 /**
  * @route   PATCH /api/v1/social/:id/like
  * @desc    Toggle Like.
- * @note    Cambiado a PATCH por ser una actualización parcial.
+ * @nota    Se usa PATCH y no PUT porque es una actualización parcial (solo el campo likes).
  */
 socialRouter.patch(
   "/:id/like",

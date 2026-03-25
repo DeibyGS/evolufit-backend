@@ -1,5 +1,5 @@
 /**
- * DATABASE CONFIGURATION - EVOLUTFIT
+ * CONFIGURACIÓN DE BASE DE DATOS - EVOLUTFIT
  * Gestión de la conexión persistente con MongoDB Atlas mediante Mongoose.
  */
 
@@ -20,7 +20,7 @@ const connectDB = async () => {
   } catch (err) {
     // 2. Gestión de fallos críticos:
     // Si la conexión falla (por credenciales o red), se registra el error.
-    console.error("❌ Error connecting to MongoDB:", err);
+    console.error("❌ Error al conectar con MongoDB:", err);
 
     /**
      * Finalización del proceso con código de salida 1 (error).
