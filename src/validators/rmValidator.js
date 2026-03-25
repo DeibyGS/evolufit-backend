@@ -1,10 +1,20 @@
+/**
+ * VALIDADOR DE 1RM - EVOLUTFIT
+ *
+ * Valida los datos del cálculo de Repetición Máxima (1RM) antes de persistirlo.
+ *
+ * @decision Los resultados de las fórmulas (`epleyResult`, `brzyckiResult`) son opcionales
+ *           porque se calculan en el frontend. El backend los persiste sin recalcularlos.
+ *           Solo `brzyckiResult` se usa para determinar el récord personal en el controlador.
+ *
+ * @decision `repsDone` tiene un máximo de 15 porque las fórmulas de 1RM (Epley, Brzycki)
+ *           son matemáticamente precisas hasta ~15 repeticiones. Por encima, el resultado
+ *           se vuelve una estimación poco fiable debido a la fatiga acumulada.
+ */
+
 const { z } = require("zod");
 const { MUSCLE_GROUPS, EXERCISE_NAMES } = require("../constants/exerciseList");
 
-/**
- * VALIDADOR DE RM - EVOLUTFIT
- * Ajustado para recibir weightUsed, repsDone y resultados de fórmulas.
- */
 const rmValidatorSchema = z.object({
   body: z.object({
     exerciseName: z.enum(EXERCISE_NAMES, {
@@ -38,7 +48,7 @@ const rmValidatorSchema = z.object({
       .min(1, "Al menos una repetición es necesaria")
       .max(15, "Las fórmulas de RM pierden precisión por encima de 15 reps"),
 
-    // Campos de resultados que envías desde el frontend
+    // Resultados calculados en el frontend; el backend los persiste sin recalcularlos
     epleyResult: z.coerce
       .number({
         invalid_type_error: "El resultado de Epley debe ser un número",

@@ -1,62 +1,84 @@
 /**
- * USER MANAGEMENT CONTROLLER - EVOLUTFIT
- * Operaciones CRUD de perfiles de usuario y gestión de seguridad.
+ * CONTROLADOR DE GESTIÓN DE USUARIOS - EVOLUTFIT
+ * Operaciones CRUD sobre perfiles de usuario: consulta, actualización y eliminación.
  */
 
 const User = require("../models/User.model");
 const bcrypt = require("bcrypt");
 
 /**
- * Recupera la lista completa de usuarios registrados.
- * Principalmente para uso administrativo o debug interno.
+ * Devuelve la lista completa de usuarios registrados.
+ * Uso interno: depuración y administración. No está expuesto en producción
+ * sin un middleware de autorización por rol de administrador.
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
  */
 const getAllUsers = async (req, res) => {
   try {
     const users = await User.find();
     if (users.length === 0) {
-      return res.status(404).json({ message: "No users found" });
+      // Se devuelve 404 en lugar de array vacío para indicar que no hay datos
+      return res.status(404).json({ message: "No se encontraron usuarios" });
     }
     res.status(200).json(users);
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ message: "Error del servidor", error: error.message });
   }
 };
 
 /**
- * Obtiene un perfil de usuario específico mediante su ID de MongoDB.
+ * Obtiene el perfil completo de un usuario por su ID de MongoDB.
+ *
+ * @caso_borde Si el `id` no tiene el formato correcto de ObjectId (24 caracteres hex),
+ *             Mongoose lanza un CastError que Express convierte en 500. Para mejorarlo
+ *             en el futuro se podría validar el formato antes con `mongoose.isValidObjectId`.
+ *
+ * @param {import('express').Request} req - Params: id (ObjectId del usuario).
+ * @param {import('express').Response} res
  */
 const getUserById = async (req, res) => {
   try {
     const { id } = req.params;
     const user = await User.findById(id);
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: "Usuario no encontrado" });
     }
     res.status(200).json(user);
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ message: "Error del servidor", error: error.message });
   }
 };
 
 /**
- * ACTUALIZAR PERFIL (DATOS GENERALES)
- * @desc Actualiza nombre, apellido, edad, etc.
+ * Actualiza los datos del perfil del usuario autenticado (nombre, edad, etc.).
+ * No gestiona cambios de contraseña; para eso existe `updatePassword`.
+ *
+ * @decision Se usa `findByIdAndUpdate` con `{ new: true }` para recibir el documento
+ *           ya actualizado en la respuesta, evitando una segunda consulta a BD.
+ *
+ * @decision `.select("-password")` excluye el hash de la contraseña de la respuesta.
+ *           Es una medida defensiva: aunque el middleware isAuth ya omite la contraseña
+ *           en req.user, aquí se accede directamente a la BD y hay que ser explícito.
+ *
+ * @decision El body ya llega validado y filtrado por el validador Zod correspondiente,
+ *           por lo que se puede usar `$set: req.body` con seguridad.
+ *
+ * @param {import('express').Request} req - `req.user._id` inyectado por isAuth.
+ * @param {import('express').Response} res
  */
 const updateUser = async (req, res) => {
   try {
-    // Extraemos el ID del token (inyectado por isAuth)
     const userId = req.user._id;
 
-    // Actualizamos usando findByIdAndUpdate para eficiencia
-    // El req.body ya viene filtrado y validado por updateValidatorSchema (Zod)
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       { $set: req.body },
       {
-        new: true, // Devuelve el documento ya actualizado
-        runValidators: true, // Asegura que se respeten las validaciones del modelo
+        new: true,          // Devuelve el documento ya actualizado, no el anterior
+        runValidators: true, // Aplica las validaciones del schema Mongoose al actualizar
       },
-    ).select("-password"); // Excluimos la contraseña por seguridad
+    ).select("-password");
 
     if (!updatedUser) {
       return res.status(404).json({
@@ -79,23 +101,31 @@ const updateUser = async (req, res) => {
 };
 
 /**
- * ACTUALIZAR CONTRASEÑA
- * @desc Cambia la contraseña disparando el middleware pre("save")
+ * Cambia la contraseña del usuario autenticado verificando primero la contraseña actual.
+ *
+ * @decision A diferencia del flujo de recuperación (forgotPassword/resetPassword),
+ *           aquí se exige la contraseña actual. Esto protege al usuario si su sesión
+ *           quedó abierta en un dispositivo ajeno.
+ *
+ * @decision Se usa `user.save()` en lugar de `findByIdAndUpdate` porque `findByIdAndUpdate`
+ *           NO dispara el middleware pre("save") del modelo, que es el que hashea
+ *           la contraseña antes de persistirla.
+ *
+ * @param {import('express').Request} req - Body: oldPassword, password. `req.user._id` por isAuth.
+ * @param {import('express').Response} res
  */
 const updatePassword = async (req, res) => {
   try {
     const userId = req.user._id;
-    // Ahora esperamos recibir AMBAS contraseñas del frontend
     const { oldPassword, password } = req.body;
 
-    // 1. Buscar al usuario (necesitamos su hash actual)
+    // Se necesita el documento completo (con el hash) para poder compararlo con bcrypt
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "Usuario no encontrado" });
     }
 
-    // 2. ¡ESTA ES LA PARTE QUE FALTABA!
-    // Comparamos la "contraseña actual" enviada con la de la base de datos
+    // Verificamos que la contraseña actual enviada coincide con el hash almacenado
     const isMatch = await bcrypt.compare(oldPassword, user.password);
 
     if (!isMatch) {
@@ -105,8 +135,7 @@ const updatePassword = async (req, res) => {
       });
     }
 
-    // 3. Si es correcta, asignamos la nueva
-    // Tu middleware pre("save") se encargará de hashear 'password'
+    // Asignamos en plano; el pre("save") del modelo se encarga del hash
     user.password = password;
     await user.save();
 
@@ -118,12 +147,24 @@ const updatePassword = async (req, res) => {
   }
 };
 
+/**
+ * Elimina permanentemente la cuenta del usuario autenticado.
+ *
+ * @decision El ID se extrae del token (req.user._id) y no de los parámetros de la URL.
+ *           Esto garantiza que un usuario solo puede eliminar su propia cuenta,
+ *           sin posibilidad de indicar un ID ajeno en la petición.
+ *
+ * @caso_borde Esta operación no elimina en cascada los entrenamientos, registros RM
+ *             ni publicaciones sociales del usuario. Sería necesario implementar
+ *             un hook post("findOneAndDelete") en el modelo o limpiarlos aquí.
+ *
+ * @param {import('express').Request} req - `req.user._id` inyectado por isAuth.
+ * @param {import('express').Response} res
+ */
 const deleteUser = async (req, res) => {
   try {
-    // 1. Obtenemos el ID directamente del token (Seguridad total)
     const userId = req.user._id;
 
-    // 2. Eliminamos
     const userDeleted = await User.findByIdAndDelete(userId);
 
     if (!userDeleted) {

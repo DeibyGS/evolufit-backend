@@ -1,13 +1,26 @@
 /**
- * RM & LEADERBOARD CONTROLLER - EVOLUTFIT
- * Gestión de cálculos de 1RM (Repetición Máxima) y Rankings globales.
+ * CONTROLADOR DE 1RM Y LEADERBOARD - EVOLUTFIT
+ * Gestión de cálculos de Repetición Máxima (1RM) y del ranking global de atletas.
  */
-/**
- * Almacena un nuevo cálculo de RM.
- * Utiliza el spread operator para incluir los datos del cálculo y el ID del usuario autenticado.
- */
+
 const RMRecord = require("../models/rm.model");
 
+/**
+ * Guarda un nuevo cálculo de 1RM y determina si es récord personal (PR).
+ * URL: POST /api/rm
+ *
+ * @decision Se busca el mejor resultado previo del ejercicio para ese usuario
+ *           antes de guardar, y se marca `isPersonalRecord: true` si el nuevo
+ *           resultado supera al anterior. El frontend usa este flag para mostrar
+ *           la animación de celebración al usuario.
+ *
+ * @decision Se ordena por `brzyckiResult` descendente y se toma el primero,
+ *           en lugar de guardar un campo "mejor resultado" separado. Esto evita
+ *           inconsistencias si el usuario borra registros intermedios.
+ *
+ * @param {import('express').Request} req - Body: exerciseName, brzyckiResult, muscleGroup, etc.
+ * @param {import('express').Response} res
+ */
 const saveRM = async (req, res) => {
   try {
     const { exerciseName, brzyckiResult } = req.body;
@@ -49,8 +62,14 @@ const saveRM = async (req, res) => {
 };
 
 /**
- * Obtiene el historial personal de marcas del usuario.
- * Ordenado cronológicamente para visualizar la progresión de fuerza.
+ * Obtiene el historial paginado de registros 1RM del usuario autenticado.
+ * URL: GET /api/rm?page=1&limit=15
+ *
+ * @decision `Promise.all` ejecuta la consulta paginada y el conteo total en paralelo,
+ *           reduciendo la latencia frente a dos queries secuenciales.
+ *
+ * @param {import('express').Request} req - Query: page (default 1), limit (default 15)
+ * @param {import('express').Response} res
  */
 const getMyRMs = async (req, res) => {
   try {
@@ -80,8 +99,20 @@ const getMyRMs = async (req, res) => {
 };
 
 /**
- * Elimina un registro de RM específico.
- * Verifica la propiedad del registro antes de ejecutar la acción.
+ * Elimina un registro de 1RM del historial del usuario.
+ * URL: DELETE /api/rm/:id
+ *
+ * @decision `findOneAndDelete` con filtro compuesto `{ _id, userId }` verifica
+ *           la propiedad y borra en una sola operación atómica. Si el ID
+ *           pertenece a otro usuario, no encuentra el documento y no borra nada.
+ *
+ * @caso_borde Si el registro eliminado era el récord personal del ejercicio,
+ *             el siguiente registro más alto pasa a ser el nuevo mejor, pero
+ *             su campo `isPersonalRecord` no se actualiza automáticamente.
+ *             Aceptable para el alcance del TFG.
+ *
+ * @param {import('express').Request} req - Params: id (ObjectId del registro)
+ * @param {import('express').Response} res
  */
 const deleteRM = async (req, res) => {
   try {
@@ -97,12 +128,22 @@ const deleteRM = async (req, res) => {
 };
 
 /**
- * Genera el Ranking Global (Leaderboard).
- * Utiliza un pipeline de agregación para obtener los récords más altos por ejercicio.
- */
-/**
- * Genera el Ranking Global (Leaderboard).
- * Ahora con estructura de paginación completa.
+ * Genera el ranking global de 1RM paginado (Leaderboard).
+ * URL: GET /api/rm/leaderboard?page=1&limit=10
+ *
+ * @decision El pipeline agrupa por `exerciseName` y toma el record más alto de cada
+ *           ejercicio para mostrarlo en el leaderboard. Para ello primero ordena por
+ *           `brzyckiResult` descendente y luego usa `$first` en el `$group`, que
+ *           selecciona el primer documento de cada grupo (el de mayor peso).
+ *
+ * @decision `Promise.all` ejecuta el pipeline de récords y el conteo de ejercicios
+ *           únicos en paralelo para calcular la paginación sin una query extra secuencial.
+ *
+ * @decision Se usa `$lookup` con sub-pipeline `$project` para traer solo los datos
+ *           necesarios del autor (name, lastname, avatar), sin exponer campos sensibles.
+ *
+ * @param {import('express').Request} req - Query: page (default 1), limit (default 10)
+ * @param {import('express').Response} res
  */
 const getLeaderboard = async (req, res) => {
   try {

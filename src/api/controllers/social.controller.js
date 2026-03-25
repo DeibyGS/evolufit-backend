@@ -1,16 +1,38 @@
 /**
- * SOCIAL & COMMUNITY CONTROLLER - EVOLUTFIT
- * Gestión de feed, interacciones atómicas y seguridad de recursos.
+ * CONTROLADOR SOCIAL Y COMUNIDAD - EVOLUTFIT
+ * Gestión del feed, interacciones (likes) y seguridad de recursos sociales.
  */
 
 const Social = require("../models/social.model");
 
 /**
- * GET /api/v1/social
- * Obtención del feed con agregaciones optimizadas.
+ * Obtiene el feed de publicaciones con paginación, filtros y ordenación.
+ * URL: GET /api/social?page=1&limit=10&sort=popular&muscle=Pecho&search=sentadilla
+ *
+ * @decision Se usa un pipeline de agregación en lugar de `.find()` porque
+ *           la ordenación por popularidad (`sort=popular`) requiere calcular
+ *           `likesCount` como campo derivado (`$size` del array `likes`) antes
+ *           de poder ordenar por él. Con `.find()` eso no es posible.
+ *
+ * @decision `$addFields: { likesCount: { $size: "$likes" } }` calcula el contador
+ *           en la consulta misma, evitando traer todos los documentos a Node.js
+ *           para calcular el tamaño del array allí.
+ *
+ * @decision La búsqueda por texto usa `$regex` con `$options: "i"` (case-insensitive)
+ *           sobre título, contenido y grupos musculares. Para producción con
+ *           colecciones grandes sería mejor un índice de texto (`$text / $search`).
+ *
+ * @decision `Promise.all` ejecuta el pipeline y el `countDocuments` en paralelo,
+ *           reduciendo la latencia de la respuesta frente a dos queries secuenciales.
+ *
+ * @decision `$lookup` con sub-pipeline `$project` trae solo los campos del autor
+ *           que necesita el frontend (name, lastname, avatar), evitando exponer
+ *           datos sensibles como el email o el hash de contraseña.
+ *
+ * @param {import('express').Request} req - Query: page, limit, sort, muscle, search
+ * @param {import('express').Response} res
  */
 const getSocialPosts = async (req, res) => {
-  // Extraemos también page y limit de la query
   const { sort, muscle, search } = req.query;
 
   const page = parseInt(req.query.page) || 1;
@@ -22,6 +44,7 @@ const getSocialPosts = async (req, res) => {
   if (muscle) query.muscleGroups = muscle;
 
   if (search) {
+    // $or permite buscar el término en varios campos simultáneamente
     query.$or = [
       { title: { $regex: search, $options: "i" } },
       { content: { $regex: search, $options: "i" } },
@@ -30,18 +53,23 @@ const getSocialPosts = async (req, res) => {
   }
 
   try {
+    // Ordenación por defecto: más reciente primero
     let sortQuery = { createdAt: -1 };
-    // Ajuste para que coincida con los strings de tu Front ('recent', 'popular')
+    // Los strings de sort coinciden con los valores que envía el frontend
     if (sort === "oldest") sortQuery = { createdAt: 1 };
+    // "popular" ordena por likesCount, que se calcula como campo derivado en el pipeline
     if (sort === "popular") sortQuery = { likesCount: -1 };
 
     const postsPipeline = [
       { $match: query },
+      // Calculamos likesCount como tamaño del array para poder ordenar por él
       { $addFields: { likesCount: { $size: "$likes" } } },
       { $sort: sortQuery },
-      { $skip: skip }, // Saltamos los que ya vimos
-      { $limit: parseInt(limit) }, // Traemos solo el bloque necesario
+      { $skip: skip },
+      { $limit: parseInt(limit) },
       {
+        // Unimos con la colección 'users' para obtener los datos del autor
+        // Solo traemos los campos necesarios para el frontend (evita exponer datos sensibles)
         $lookup: {
           from: "users",
           localField: "userId",
@@ -50,9 +78,11 @@ const getSocialPosts = async (req, res) => {
           as: "author",
         },
       },
+      // $unwind convierte el array 'author' (de 1 elemento) en un objeto directo
       { $unwind: "$author" },
     ];
 
+    // Ejecutamos pipeline y conteo en paralelo para reducir latencia
     const [posts, totalPosts] = await Promise.all([
       Social.aggregate(postsPipeline),
       Social.countDocuments(query),
@@ -71,8 +101,14 @@ const getSocialPosts = async (req, res) => {
 };
 
 /**
- * POST /api/v1/social
- * Crea una nueva publicación vinculada al token del usuario.
+ * Crea una nueva publicación en el feed de la comunidad.
+ * URL: POST /api/social
+ *
+ * @decision El `userId` se extrae del token (req.user._id), no del body,
+ *           para garantizar que el autor siempre es el usuario autenticado.
+ *
+ * @param {import('express').Request} req - Body: title, content, muscleGroups
+ * @param {import('express').Response} res
  */
 const createPost = async (req, res) => {
   try {
@@ -95,8 +131,19 @@ const createPost = async (req, res) => {
 };
 
 /**
- * PATCH /api/v1/social/like/:id
- * Toggle de likes usando operaciones atómicas de MongoDB.
+ * Alterna el like de un usuario sobre una publicación (toggle).
+ * URL: PATCH /api/social/like/:id
+ *
+ * @decision Se hace en dos pasos intencionales: primero verificar si el usuario
+ *           ya dio like (`findOne`) y luego aplicar `$pull` o `$addToSet` según
+ *           corresponda. Esto es más legible que un `$cond` dentro del update.
+ *
+ * @decision `$addToSet` garantiza que un usuario no pueda añadir su ID dos veces
+ *           al array, incluso si hay condiciones de carrera (race condition).
+ *           `$pull` lo elimina si ya estaba. Ambas son operaciones atómicas de MongoDB.
+ *
+ * @param {import('express').Request} req - Params: id (ObjectId del post)
+ * @param {import('express').Response} res
  */
 const toggleLike = async (req, res) => {
   const { id } = req.params;
@@ -129,8 +176,19 @@ const toggleLike = async (req, res) => {
 };
 
 /**
- * PUT /api/v1/social/:id
- * Actualización segura: Solo el autor puede editar.
+ * Actualiza el contenido de una publicación existente.
+ * URL: PUT /api/social/:id
+ *
+ * @decision El filtro `{ _id: id, userId }` garantiza que solo el autor
+ *           puede editar su publicación. Si el ID pertenece a otro usuario,
+ *           `findOneAndUpdate` devuelve null y se responde con 404.
+ *
+ * @decision Se desestructura el body (title, content, muscleGroups) en lugar
+ *           de usar `$set: req.body`, para evitar que el cliente pueda
+ *           inyectar campos sensibles como `userId` o `likes`.
+ *
+ * @param {import('express').Request} req - Params: id. Body: title, content, muscleGroups
+ * @param {import('express').Response} res
  */
 const updatePost = async (req, res) => {
   try {
@@ -159,8 +217,15 @@ const updatePost = async (req, res) => {
 };
 
 /**
- * DELETE /api/v1/social/:id
- * Eliminación segura basada en identidad.
+ * Elimina una publicación del feed.
+ * URL: DELETE /api/social/:id
+ *
+ * @decision `findOneAndDelete` con filtro compuesto `{ _id, userId }` verifica
+ *           la propiedad y borra en una sola operación atómica, evitando
+ *           que un usuario pueda eliminar publicaciones ajenas.
+ *
+ * @param {import('express').Request} req - Params: id (ObjectId del post)
+ * @param {import('express').Response} res
  */
 const deletePost = async (req, res) => {
   try {

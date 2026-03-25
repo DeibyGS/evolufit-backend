@@ -13,14 +13,25 @@ const request = require("supertest");
 const app = require("../app");
 const { connect, disconnect, clearDatabase } = require("./helpers/db");
 
-// Mock del mailer para no enviar emails reales en tests
-jest.mock("../utils/mailer", () => ({
-  sendMail: jest.fn().mockResolvedValue({ messageId: "test-id" }),
-}));
+// vi.mock no intercepta require() en proyectos CJS porque el módulo ya está
+// en la caché de Node antes de que el mock se registre.
+// Solución: vi.spyOn sobre el objeto ya cargado. Funciona porque Node.js cachea
+// el módulo por referencia — mutar sendMail afecta también la variable `transporter`
+// que ya tiene el controller en su scope.
+let sendMailSpy;
 
-beforeAll(async () => await connect());
+beforeAll(async () => {
+  const mailer = require("../utils/mailer");
+  sendMailSpy = vi
+    .spyOn(mailer, "sendMail")
+    .mockResolvedValue({ messageId: "test-id" });
+  await connect();
+});
 afterEach(async () => await clearDatabase());
-afterAll(async () => await disconnect());
+afterAll(async () => {
+  sendMailSpy?.mockRestore();
+  await disconnect();
+});
 
 // ─── REGISTER ────────────────────────────────────────────────────────────────
 

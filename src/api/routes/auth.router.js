@@ -1,6 +1,7 @@
 /**
- * AUTHENTICATION ROUTER - EVOLUTFIT
- * Definición de rutas públicas para la gestión de acceso y registro.
+ * ROUTER DE AUTENTICACIÓN - EVOLUTFIT
+ * Rutas públicas de acceso, registro y recuperación de contraseña.
+ * La única ruta privada es PATCH /change-password (requiere isAuth).
  */
 
 const {
@@ -45,6 +46,11 @@ authRouter.post("/forgot-password", forgotPassword);
  */
 authRouter.post("/reset-password/:token", resetPassword);
 
+/**
+ * @route   PATCH /api/auth/change-password
+ * @desc    Cambia la contraseña del usuario autenticado (requiere la contraseña actual).
+ * @access  Privado (isAuth)
+ */
 authRouter.patch(
   "/change-password",
   isAuth,
