@@ -26,45 +26,54 @@ El proyecto está organizado siguiendo el patrón **Modelo-Vista-Controlador** p
 
 ---
 
-## 🛠️ Endpoints de la API (v1)
+## 🛠️ Endpoints de la API
 
-### 🔐 Autenticación y Usuarios (`/api/v1/auth` & `/api/v1/user`)
+> **Nota:** Las rutas se montan sin versionado `/v1` (ver `app.js`). Autenticación vía `Authorization: Bearer <token>`.
 
-- `POST /auth/register` - Registro de nuevos atletas.
-- `POST /auth/login` - Inicio de sesión y entrega de Token JWT.
-- `GET /user` - Lista de todos los usuarios registrados (Público).
-- `GET /user/:id` - Detalle de un perfil específico.
-- `PUT /user/:id/change-password` - Actualización de contraseña (Privado).
-- `PUT /user/:id` - Actualización de datos de perfil (Privado).
-- `DELETE /user/:id` - Eliminación permanente de cuenta (Privado).
+### 🔐 Autenticación (`/api/auth`)
 
-### 📊 Entrenamientos y Analítica (`/api/v1/workout`)
+- `POST /register` - Registro de nuevos atletas. (Público)
+- `POST /login` - Inicio de sesión y entrega de Token JWT. (Público)
+- `POST /forgot-password` - Solicita enlace de recuperación por email. (Público)
+- `POST /reset-password/:token` - Establece nueva contraseña con el token de la URL. (Público)
+- `PATCH /change-password` - Cambia la contraseña validando la actual. (Privado `isAuth`)
+
+### 👤 Usuarios (`/api/users`)
+
+- `GET /` - Lista de todos los usuarios (Ranking). (Privado `isAuth`)
+- `GET /:id` - Detalle de un perfil específico. (Privado `isAuth`)
+- `PUT /profile` - Actualización de datos generales del perfil. (Privado)
+- `DELETE /delete-me` - Eliminación permanente de la propia cuenta. (Privado)
+
+### 📊 Entrenamientos y Analítica (`/api/workouts`)
 
 - `POST /` - Registrar una nueva sesión completada.
-- `GET /my-workouts` - Historial personal de entrenamientos.
+- `GET /my-workouts` - Historial personal de entrenamientos (soporta `page`/`limit`).
 - `GET /stats` - Estadísticas de distribución muscular y volumen.
 - `GET /total-volume` - Sumatoria total de peso levantado (Tonnage).
 - `GET /:id` - Detalle de una rutina específica.
 - `DELETE /:id` - Eliminar registro de entrenamiento.
 
-### 🏆 Fuerza y Leaderboard (`/api/v1/rm`)
+### 🏆 Fuerza y Leaderboard (`/api/rm`)
 
 - `POST /` - Registrar nueva marca personal (1RM).
 - `GET /` - Historial de RMs del usuario.
-- `GET /leaderboard` - Ranking global de los mejores levantamientos.
+- `GET /leaderboard` - Ranking global de los mejores levantamientos (paginado).
 - `DELETE /:id` - Eliminar marca de RM.
 
-### 🍎 Salud y Biometría (`/api/v1/health`)
+### 🍎 Salud y Biometría (`/api/health`)
 
 - `POST /` - Guardar cálculo de salud (IMC, TDEE, TMB).
 - `GET /` - Historial biométrico del usuario.
 - `DELETE /:id` - Eliminar registro de salud.
 
-### 🤝 Comunidad Social (`/api/v1/social`)
+### 🤝 Comunidad Social (`/api/social`)
 
 - `GET /` - Feed de publicaciones (Soporta query params: `sort`, `muscle`, `search`).
 - `POST /` - Compartir una nueva rutina con la comunidad.
-- `POST /:id/like` - Alternar (Toggle) Like en una publicación.
+- `PATCH /:id/like` - Alternar (Toggle) Like en una publicación.
+- `PUT /:id` - Editar una publicación propia.
+- `DELETE /:id` - Eliminar una publicación propia.
 
 ---
 
@@ -74,6 +83,43 @@ El proyecto está organizado siguiendo el patrón **Modelo-Vista-Controlador** p
 2.  **Inyección de Identidad:** El servidor vincula automáticamente el `req.user` mediante el token, garantizando que un usuario solo pueda modificar sus propios datos.
 3.  **CORS:** Configurado para aceptar peticiones multiplataforma.
 4.  **Versionado:** API estructurada bajo `/v1` para asegurar la compatibilidad futura.
+
+---
+
+## 🧪 Tests
+
+La suite de tests cubre los 6 módulos de la API con **55 tests** usando Jest + Supertest + MongoDB In-Memory.
+
+### Ejecutar tests
+
+```bash
+# Todos los tests con reporte de coverage
+npm test
+
+# Modo watch (re-ejecuta al guardar)
+npm run test:watch
+```
+
+### Resultados actuales
+
+| Suite | Tests | Estado |
+|-------|-------|--------|
+| auth.test.js | 6 | ✅ |
+| user.test.js | 9 | ✅ |
+| workout.test.js | 10 | ✅ |
+| health.test.js | 7 | ✅ |
+| rm.test.js | 8 | ✅ |
+| social.test.js | 15 | ✅ |
+| **Total** | **55** | **✅ 100%** |
+
+**Coverage global: 83.67% líneas** (umbral mínimo: 80%)
+
+### Arquitectura de tests
+
+- `tests/helpers/db.js` — Levanta MongoDB en memoria con `mongodb-memory-server`
+- `tests/helpers/auth.js` — Helper para crear usuarios y tokens JWT de prueba
+- Cada suite usa `beforeAll/afterEach/afterAll` para aislar datos entre tests
+- El mailer (Nodemailer) se mockea para no enviar emails reales
 
 ---
 

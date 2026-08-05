@@ -1,8 +1,25 @@
+/**
+ * VALIDADORES DE USUARIO - EVOLUTFIT
+ *
+ * Define los esquemas Zod para las rutas de autenticación y perfil.
+ *
+ * @decision Se define primero un `userValidatorSchema` maestro con todos los campos,
+ *           y luego cada ruta usa `.shape`, `.omit()` y `.partial()` para reutilizar
+ *           las reglas sin duplicar la lógica de validación.
+ *           Ejemplo: el esquema de login reutiliza `email` y `password` del maestro
+ *           con `userValidatorSchema.shape.email`.
+ *
+ * @decision `.lowercase()` en el campo email normaliza antes de validar, igual que
+ *           el modelo de Mongoose (campo `lowercase: true`), para evitar que
+ *           "Usuario@mail.com" y "usuario@mail.com" se traten como cuentas distintas.
+ */
+
 const { z } = require("zod");
 
 /**
- * ESQUEMA MAESTRO (Base de datos)
- * Lo mantenemos limpio para usar sus formas (.shape)
+ * Esquema maestro de usuario con todos los campos posibles.
+ * No se usa directamente en las rutas — sirve como fuente de campos
+ * reutilizables para los esquemas específicos de cada endpoint.
  */
 const userValidatorSchema = z.object({
   name: z
@@ -48,7 +65,7 @@ const userValidatorSchema = z.object({
     .max(100, "La contraseña es demasiado larga"),
 });
 
-// 1. Esquema de Registro (Nuevo: Envolviendo el maestro en 'body')
+/** Esquema para POST /api/auth/register — requiere todos los campos del maestro */
 const registerValidatorSchema = z.object({
   body: z.object({
     name: userValidatorSchema.shape.name,
@@ -59,7 +76,7 @@ const registerValidatorSchema = z.object({
   }),
 });
 
-// 2. Esquema de Login (Ya lo tenías bien wrapped)
+/** Esquema para POST /api/auth/login — solo email y contraseña */
 const loginValidatorSchema = z.object({
   body: z.object({
     email: userValidatorSchema.shape.email,
@@ -67,12 +84,17 @@ const loginValidatorSchema = z.object({
   }),
 });
 
-// 3. Esquema de Actualización (Corregido: Ahora envuelve el parcial en 'body')
+/**
+ * Esquema para PUT /api/users (actualización de perfil).
+ * `.omit({ password, email })` excluye campos que tienen su propio endpoint dedicado.
+ * `.partial()` hace todos los campos opcionales: el usuario puede actualizar solo el nombre
+ * sin necesidad de enviar todos los demás campos.
+ */
 const updateValidatorSchema = z.object({
   body: userValidatorSchema.omit({ password: true, email: true }).partial(),
 });
 
-// 4. Esquema de Cambio de Contraseña (Mantenemos tu versión corregida)
+/** Esquema para PATCH /api/auth/change-password — requiere la contraseña actual y la nueva */
 const changePasswordSchema = z.object({
   body: z.object({
     oldPassword: z.string().min(1, "La contraseña actual es obligatoria"),

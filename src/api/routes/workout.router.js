@@ -1,6 +1,7 @@
 /**
- * WORKOUT & ANALYTICS ROUTER - EVOLUTFIT
- * Definición de endpoints para el registro de sesiones y la obtención de métricas de rendimiento.
+ * ROUTER DE ENTRENAMIENTOS Y ANALÍTICAS - EVOLUTFIT
+ * Endpoints para registrar sesiones de entrenamiento y obtener métricas de rendimiento.
+ * Todas las rutas son privadas (requieren isAuth).
  */
 
 const { isAuth } = require("../../middlewares/auth");
