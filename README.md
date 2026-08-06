@@ -121,6 +121,46 @@ npm run test:watch
 
 ---
 
+## AI Development Benchmark
+
+EvolutFit Backend was engineered by a human developer working with AI as a **pair programming partner**. The AI accelerated implementation — the Express architecture, MVC structure, and engineering decisions stayed human.
+
+### How we worked together
+
+| Human-owned | AI implemented, always human-reviewed |
+|-------------|-------------------------------------|
+| Product vision & API design | Express route & controller generation |
+| MVC architecture & data model (MongoDB) | Mongoose schemas, service layer |
+| Security & validation decisions | Refactoring, error handling |
+| Code review & final acceptance | Test scaffolding, auxiliary docs |
+
+**Workflow:** `Idea → Spec → AI implementation → Human review → Test → Refine → Merge`
+
+### AI Development Principles
+
+- AI never made product decisions.
+- Every implementation started from a written specification.
+- Documentation was treated as executable context for AI.
+- All generated code required human review.
+- Architecture was preserved over implementation speed.
+
+<details>
+<summary><strong>Supporting metrics</strong></summary>
+<br>
+
+| Metric | Value |
+|--------|-------|
+| AI sessions | 4 logged (CC) |
+| Measured development time | ~25 h |
+| Primary model | Claude Sonnet 4.6 |
+| Secondary | OpenCode (DeepSeek V4 Flash) |
+
+_Measured with [ClaudeStat](https://github.com/DeibyGS/claudestat). Approximate values; part of the EvolutFit ecosystem._
+
+</details>
+
+---
+
 ## ⚙️ Local Setup
 
 1.  Clone the repository and install dependencies: `npm install`.
